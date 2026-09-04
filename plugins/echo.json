@@ -1,0 +1,11 @@
+{
+  "id": "echo",
+  "version": "1.0.0",
+  "capabilities": ["echo.msg@1"],
+  "subscriptions": [],
+  "reducer": "echo",
+  "init_state": {},
+  "tier": "inproc",
+  "trust": "trusted",
+  "restart": "permanent"
+}

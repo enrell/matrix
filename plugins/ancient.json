@@ -1,0 +1,11 @@
+{
+  "id": "ancient",
+  "version": "1.0.0",
+  "capabilities": ["ancient.api@1"],
+  "subscriptions": [],
+  "reducer": "ancient",
+  "init_state": {},
+  "tier": "inproc",
+  "trust": "trusted",
+  "restart": "permanent"
+}

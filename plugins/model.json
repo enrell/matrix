@@ -1,0 +1,11 @@
+{
+  "id": "model",
+  "version": "1.0.0",
+  "capabilities": ["model.chat@1"],
+  "subscriptions": [],
+  "reducer": "model",
+  "init_state": {},
+  "tier": "inproc",
+  "trust": "trusted",
+  "restart": "permanent"
+}

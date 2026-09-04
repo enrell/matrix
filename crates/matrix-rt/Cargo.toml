@@ -1,0 +1,12 @@
+[package]
+name = "matrix-rt"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "matrix-rt"
+path = "src/main.rs"
+
+[dependencies]
+matrix-core = { path = "../matrix-core" }
+serde_json = "1"

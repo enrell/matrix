@@ -1,0 +1,11 @@
+{
+  "id": "clock",
+  "version": "1.0.0",
+  "capabilities": ["clock.now@1"],
+  "subscriptions": ["sys.tick"],
+  "reducer": "clock",
+  "init_state": {"count": 0},
+  "tier": "inproc",
+  "trust": "trusted",
+  "restart": "permanent"
+}

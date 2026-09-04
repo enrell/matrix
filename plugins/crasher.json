@@ -1,0 +1,11 @@
+{
+  "id": "crasher",
+  "version": "1.0.0",
+  "capabilities": ["crash.inject@1"],
+  "subscriptions": [],
+  "reducer": "crasher",
+  "init_state": {},
+  "tier": "inproc",
+  "trust": "untrusted-heavy",
+  "restart": "transient"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "counter",
+  "version": "1.0.0",
+  "capabilities": ["count.state@1"],
+  "subscriptions": ["sys.tick"],
+  "reducer": "counter",
+  "init_state": {"state": 0},
+  "tier": "inproc",
+  "trust": "trusted",
+  "restart": "permanent"
+}

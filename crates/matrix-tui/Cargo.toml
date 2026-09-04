@@ -1,0 +1,12 @@
+[package]
+name = "matrix-tui"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "matrix-tui"
+path = "src/main.rs"
+
+[dependencies]
+matrix-sdk = { path = "../matrix-sdk" }
+serde_json = "1"

@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/matrix-core", "crates/matrix-rt", "crates/matrix-sdk", "crates/matrix-tui"]
+resolver = "2"
