@@ -1,5 +1,7 @@
 # Plugins remotos e falhas distribuídas
 
+> Implementação disponível: [perfil gerenciado M3–M5](MANAGED-RUNTIME.md). Este documento preserva o contrato de projeto; consulte o perfil para saber quais mecanismos e transportes estão implementados.
+
 Status: extensão proposta, posterior à conformidade local. Uma autoridade de composição por domínio no v0.1; sem eleição automática de líder ou federação.
 
 ## Responsabilidades

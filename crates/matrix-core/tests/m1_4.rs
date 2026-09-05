@@ -7,7 +7,7 @@
 //! - C07: reload remove capability; candidato que falha deixa estado
 //!   explícito e recuperável.
 
-use matrix_core::{CallPolicy, Journal, Kernel, ResourceKind};
+use matrix_core::{CallPolicy, Journal, Kernel};
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::sync::mpsc;

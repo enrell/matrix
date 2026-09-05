@@ -143,6 +143,11 @@ fn run_daemon(dry_run: bool, batch_fsync: bool, v2: bool) {
     let journal = Journal::open(&journal_path, v2, batch_fsync).expect("journal open");
     let k = Arc::new(Kernel::new(&h, journal, dry_run));
 
+    // Host local (M2.2+): executa plugins `execution.process` e entrega
+    // chamadas. Anexado antes da carga para receber os Activated.
+    let host = matrix_host::Host::attach(k.clone(), &run_dir.join("host"))
+        .expect("host attach");
+
     let mut loaded = 0usize;
     if k.plugins_dir.is_dir() {
         if let Ok(rd) = std::fs::read_dir(&k.plugins_dir) {
@@ -198,6 +203,7 @@ fn run_daemon(dry_run: bool, batch_fsync: bool, v2: bool) {
             }
         }
     }
+    host.shutdown();
     k.journal.flush_sync();
     let _ = std::fs::remove_file(&sp);
 }

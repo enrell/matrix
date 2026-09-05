@@ -17,12 +17,12 @@
 //!     }
 //! }
 //!
-//! let comp = Component::connect("/run/host.sock", "echo").unwrap();
-//! comp.serve(Echo);
+//! let comp = Component::connect(std::path::Path::new("/run/host.sock"), "echo").unwrap();
+//! comp.serve(Echo).unwrap();
 //! ```
 
 use matrix_proto::{
-    encode, parse_frame_payload, read_frame, Envelope, DEFAULT_MAX_FRAME,
+    encode, parse_frame_payload, read_frame, DEFAULT_MAX_FRAME,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -129,7 +129,7 @@ impl Component {
                 "version": matrix_proto::PROTOCOL_VERSION,
                 "type": "hello",
                 "message_id": "h1",
-                "body": {"versions": ["0.1"], "max_frame": DEFAULT_MAX_FRAME, "client": "matrix-component"},
+                "body": {"launch_token": std::env::var("MATRIX_LAUNCH_TOKEN").unwrap_or_default(), "versions": ["0.1"], "max_frame": DEFAULT_MAX_FRAME, "client": "matrix-component"},
             }),
             DEFAULT_MAX_FRAME,
         )?;
@@ -337,17 +337,6 @@ impl Component {
         }
     }
 
-    fn reply_lifecycle(&self, operation_id: &Value, request_id: Option<&str>) {
-        send_lifecycle_result(
-            &self.writer,
-            &self.session_id,
-            &self.instance_id,
-            self.generation,
-            self.max_frame,
-            operation_id,
-            request_id,
-        );
-    }
 }
 
 fn send_lifecycle_result(

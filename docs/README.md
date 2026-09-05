@@ -2,6 +2,8 @@
 
 Revisão: 2026-09-05. Idioma: português. **Baseline de projeto v0.1, não protocolo estável nem certificado de implementação.** “Deve” expressa requisito de aceitação futuro.
 
+O [perfil gerenciado M3–M5](MANAGED-RUNTIME.md) documenta a implementação executável e seus limites; os contratos originais continuam como referência.
+
 ## Ordem de leitura
 
 | Documento | Pergunta respondida |

@@ -7,6 +7,7 @@ build:
 	cargo build --release
 
 test:
+	cargo build --release -p matrix-host --examples
 	cargo test --release -- --test-threads=1
 
 compat: build

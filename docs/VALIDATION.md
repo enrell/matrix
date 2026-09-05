@@ -1,5 +1,7 @@
 # Validação, operação e desempenho
 
+> Implementação disponível: [perfil gerenciado M3–M5](MANAGED-RUNTIME.md). Este documento preserva o contrato de projeto; consulte o perfil para saber quais mecanismos e transportes estão implementados.
+
 Status: plano de aceitação; testes abaixo ainda não implementados. Nenhum PASS deve ser inferido da existência deste documento.
 
 ## Suíte de conformidade

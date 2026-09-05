@@ -30,7 +30,8 @@ use std::collections::HashMap;
 use std::io;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command};
+use std::process::Child;
+use matrix_guard::Sandbox;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     mpsc, Arc, Mutex,
@@ -126,7 +127,16 @@ struct ChildEntry {
     child: Mutex<Child>,
 }
 
+#[derive(Clone, Default)]
+pub struct HostPolicy {
+    /// Missing entries are denied in secure mode. None = explicitly trusted process.
+    pub components: HashMap<String, Option<Sandbox>>,
+    pub secure: bool,
+}
+
 struct Inner {
+    policy: HostPolicy,
+    launch_tokens: Mutex<HashMap<String, (u64, String)>>,
     kernel: Arc<Kernel>,
     sock_path: PathBuf,
     sessions: Mutex<HashMap<String, Session>>,
@@ -137,6 +147,7 @@ struct Inner {
     register_ids: Mutex<IdWindow>,
     next_id: Mutex<u64>,
     shutdown: AtomicBool,
+    connecting: std::sync::atomic::AtomicUsize,
 }
 
 #[derive(Clone)]
@@ -162,13 +173,21 @@ impl Host {
     /// Anexa o host ao kernel: registra forwarder + hook, abre o listener,
     /// processa o backlog (instâncias externas já ativas) e solta as threads.
     pub fn attach(kernel: Arc<Kernel>, sock_dir: &Path) -> io::Result<Arc<Host>> {
+        Self::attach_with_policy(kernel, sock_dir, HostPolicy::default())
+    }
+
+    pub fn attach_with_policy(kernel: Arc<Kernel>, sock_dir: &Path, policy: HostPolicy) -> io::Result<Arc<Host>> {
         std::fs::create_dir_all(sock_dir)?;
         let sock_path = sock_dir.join("host.sock");
         let _ = std::fs::remove_file(&sock_path);
         let listener = UnixListener::bind(&sock_path)?;
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&sock_path, std::fs::Permissions::from_mode(0o600))?;
         let (ev_tx, ev_rx) = mpsc::channel();
         let host = Arc::new(Host {
             inner: Arc::new(Inner {
+                policy,
+                launch_tokens: Mutex::new(HashMap::new()),
                 kernel: kernel.clone(),
                 sock_path: sock_path.clone(),
                 sessions: Mutex::new(HashMap::new()),
@@ -179,6 +198,7 @@ impl Host {
                 register_ids: Mutex::new(IdWindow::new(512)),
                 next_id: Mutex::new(1),
                 shutdown: AtomicBool::new(false),
+                connecting: std::sync::atomic::AtomicUsize::new(0),
             }),
             ev_tx,
         });
@@ -230,6 +250,8 @@ impl Host {
 
     pub fn shutdown(&self) {
         self.inner.shutdown.store(true, Ordering::SeqCst);
+        let ids: Vec<_> = self.inner.children.lock().unwrap().keys().cloned().collect();
+        for id in ids { self.kill_child(&id); }
         // Acorda o accept e os leitores.
         let _ = UnixStream::connect(self.inner.sock_path.clone());
         let sessions = self.inner.sessions.lock().unwrap();
@@ -292,12 +314,22 @@ impl Host {
         args: &[String],
         _timeout_ms: u64,
     ) {
+        // Serialize spawn publication with kill_child. A queued Activated event
+        // from an already-retired generation must never resurrect a process.
+        let mut children = self.inner.children.lock().unwrap();
+        if !self.inner.kernel.contexts.current(logical).is_some_and(|c|
+            c.instance.0 == instance && c.generation == generation && c.state.canonical() == matrix_core::Fsm::Active) { return; }
         let sock = self.inner.sock_path.to_string_lossy().to_string();
         let argv = expand_args(args, &sock, logical);
-        let child = Command::new(entrypoint).args(&argv).stdin(std::process::Stdio::null()).spawn();
+        if self.inner.policy.secure && !self.inner.policy.components.contains_key(logical) { return; }
+        let sandbox = self.inner.policy.components.get(logical).and_then(|s| s.as_ref());
+        let token = match matrix_guard::random_token() { Ok(t) => t, Err(_) => return };
+        self.inner.launch_tokens.lock().unwrap().insert(logical.to_string(), (instance, token.clone()));
+        self.inner.pending_activation.lock().unwrap().insert(logical.to_string(), (instance, generation));
+        let child = matrix_guard::spawn(entrypoint, &argv, &token, &self.inner.sock_path, sandbox);
         match child {
             Ok(c) => {
-                self.inner.children.lock().unwrap().insert(
+                children.insert(
                     logical.to_string(),
                     ChildEntry { child: Mutex::new(c) },
                 );
@@ -305,6 +337,8 @@ impl Host {
                     .insert(logical.to_string(), (instance, generation));
             }
             Err(_) => {
+                self.inner.launch_tokens.lock().unwrap().remove(logical);
+                self.inner.pending_activation.lock().unwrap().remove(logical);
                 // Falha de spawn: sem sessão; chamadas falham Gone (sem sucesso falso).
             }
         }
@@ -312,11 +346,10 @@ impl Host {
 
     pub fn kill_child(&self, logical: &str) -> bool {
         let mut children = self.inner.children.lock().unwrap();
+        self.inner.launch_tokens.lock().unwrap().remove(logical);
         if let Some(entry) = children.remove(logical) {
-            if let Ok(mut c) = entry.child.lock() {
-                let _ = c.kill();
-                let _ = c.wait();
-            }
+            let cleaned = entry.child.lock().map(|mut c| matrix_guard::kill_group(&mut c).is_ok()).unwrap_or(false);
+            if !cleaned {children.insert(logical.to_string(),entry);return false;}
             self.inner.pending_activation.lock().unwrap().remove(logical);
             true
         } else {
@@ -691,11 +724,18 @@ impl Host {
             match listener.accept() {
                 Ok((stream, _)) => {
                     // Wake do shutdown (conexão sem bytes): ignora e recheca.
+                    if self.inner.connecting.fetch_add(1, Ordering::SeqCst) >= 32 {
+                        self.inner.connecting.fetch_sub(1, Ordering::SeqCst);continue;
+                    }
                     let h = self.clone();
-                    std::thread::Builder::new()
+                    if std::thread::Builder::new()
                         .name("matrix-host-conn".into())
-                        .spawn(move || h.serve_conn(stream))
-                        .ok();
+                        .spawn(move || {
+                            struct Guard(Host);
+                            impl Drop for Guard {fn drop(&mut self) {self.0.inner.connecting.fetch_sub(1, Ordering::SeqCst);}}
+                            let guard=Guard(h);
+                            guard.0.serve_conn(stream);
+                        }).is_err() {self.inner.connecting.fetch_sub(1, Ordering::SeqCst);}
                 }
                 Err(_) => {
                     if self.inner.shutdown.load(Ordering::SeqCst) {
@@ -786,6 +826,15 @@ impl Host {
             let _ = self.write_reject(&mut stream, &reg.message_id, "context-not-active", "no active instance");
             return;
         };
+        if self.inner.policy.secure {
+            let supplied = env.body.get("launch_token").and_then(|v| v.as_str()).unwrap_or("");
+            let valid = self.inner.launch_tokens.lock().unwrap().get(&child_id)
+                .is_some_and(|(i,t)| *i == instance && matrix_guard::token_eq(t, supplied));
+            if !valid {
+                let _ = self.write_reject(&mut stream, &reg.message_id, "permission-denied", "invalid launch authority");
+                return;
+            }
+        }
         // Uma sessão viva por instância (sem roubo de binding).
         {
             let by = self.inner.by_instance.lock().unwrap();
@@ -1176,8 +1225,7 @@ impl Drop for Inner {
         let mut children = self.children.lock().unwrap();
         for (_, entry) in children.drain() {
             if let Ok(mut c) = entry.child.lock() {
-                let _ = c.kill();
-                let _ = c.wait();
+                let _ = matrix_guard::kill_group(&mut c);
             }
         }
         let _ = std::fs::remove_file(&self.sock_path);

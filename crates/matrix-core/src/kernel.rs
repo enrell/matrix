@@ -73,7 +73,7 @@ pub struct OpenCall {
     pub cancel: Arc<AtomicBool>,
 }
 
-fn parse_manifest_value(v: &Value) -> Result<StoredManifest, String> {
+pub fn parse_manifest_value(v: &Value) -> Result<StoredManifest, String> {
     let id = v.get("id").and_then(|x| x.as_str()).unwrap_or("").to_string();
     if id.trim().is_empty() {
         return Err("manifest without id".into());
@@ -2136,6 +2136,16 @@ impl Kernel {
     }
 
     pub fn invoke(&self, cap: &str, input: &Value) -> (Value, bool) {
+        self.invoke_bound(cap, input, None)
+    }
+
+    /// Admission constrained to an authenticated instance grant. Never route a
+    /// stale caller into a replacement generation merely by capability name.
+    pub fn invoke_for_ref(&self, expected: &InstanceRef, cap: &str, input: &Value) -> (Value, bool) {
+        self.invoke_bound(cap, input, Some(expected))
+    }
+
+    fn invoke_bound(&self, cap: &str, input: &Value, expected: Option<&InstanceRef>) -> (Value, bool) {
         // Via rápida síncrona sobre ticket efêmero: a pós-validação fecha a
         // corrida com um descarte concorrente (revogada no meio → cancelled).
         let open = match self.call_open_ephemeral(cap, input) {
@@ -2147,10 +2157,14 @@ impl Kernel {
         };
         let fiber = open.logical.clone();
         let ticket = open.ticket;
+        if expected.is_some_and(|r| r.epoch != self.epoch() || r.instance != open.instance.0 || r.context != open.context.0 || r.generation != open.generation || r.logical != fiber) {
+            self.calls.remove(ticket);
+            return (json!({"code":"stale-generation"}), false);
+        }
         let (reducer, execution, state_ok) = {
             let ps = self.plugins.lock();
             match ps.get(&fiber) {
-                Some(p) if p.state.canonical() == Fsm::Active => {
+                Some(p) if p.state.canonical() == Fsm::Active && p.instance_id == open.instance.0 && p.generation == open.generation => {
                     (p.reducer.clone(), p.execution.clone(), true)
                 }
                 Some(_) => (String::new(), ExecutionKind::InProcess, false),
@@ -2171,10 +2185,7 @@ impl Kernel {
         // Execução externa: entrega ao host (prazo + cancelamento); sem
         // forwarder é erro explícito, nunca dispatch silencioso.
         if let ExecutionKind::External { timeout_ms, .. } = execution {
-            let cur = self.contexts.current(&fiber);
-            let (instance, generation) = cur
-                .map(|c| (c.instance, c.generation))
-                .unwrap_or((open.instance, open.generation));
+            let (instance, generation) = (open.instance, open.generation);
             let fwd = self.forwarder.lock().clone();
             let Some(fwd) = fwd else {
                 self.calls.remove(ticket);

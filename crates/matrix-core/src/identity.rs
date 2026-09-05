@@ -12,7 +12,7 @@
 //! - `InstanceRef`: referência completa verificável na fronteira do efeito.
 
 use std::fmt;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::io::Read;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct KernelEpoch(pub u64);
@@ -94,16 +94,15 @@ impl fmt::Display for InstanceRef {
     }
 }
 
-/// Gera uma época por boot. Suficiente para M1.1 (processo único);
-/// persistência/fencing real entram em M4/M5.
+/// Random boot identity. Durable ordering belongs to the managed store's
+/// monotonic fencing counters; boot identity itself must not collide when two
+/// kernels start in the same process/millisecond. Entropy failure fails closed.
 pub fn fresh_epoch() -> u64 {
-    let ms = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0);
-    // Mistura pid para evitar colisão em boots no mesmo milissegundo.
-    let pid = std::process::id() as u64;
-    (ms << 20) ^ (pid & 0xF_FFFF) ^ 0x9E37
+    let mut bytes = [0u8; 8];
+    std::fs::File::open("/dev/urandom")
+        .and_then(|mut f| f.read_exact(&mut bytes))
+        .expect("kernel boot requires OS entropy");
+    u64::from_le_bytes(bytes)
 }
 
 #[cfg(test)]

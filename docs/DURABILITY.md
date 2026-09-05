@@ -1,5 +1,7 @@
 # Persistência, recuperação e efeitos externos
 
+> Implementação disponível: [perfil gerenciado M3–M5](MANAGED-RUNTIME.md). Este documento preserva o contrato de projeto; consulte o perfil para saber quais mecanismos e transportes estão implementados.
+
 Status: proposta. O journal atual não é uma implementação deste contrato.
 
 ## Dados separados

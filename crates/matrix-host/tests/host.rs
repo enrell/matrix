@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 
 fn ext_bin() -> PathBuf {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    for profile in ["debug", "release"] {
+    for profile in [if cfg!(debug_assertions) { "debug" } else { "release" }] {
         let p = manifest.join("../../target").join(profile).join("examples/ext_echo");
         if p.exists() {
             return p;

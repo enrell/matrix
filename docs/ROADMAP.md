@@ -1,6 +1,6 @@
 # Roadmap e primeiro trabalho
 
-Status: plano proposto em 2026-09-05. M0 documental concluído nesta revisão; demais marcos não iniciados por esta revisão. Sem estimativas de prazo antes de executar M1.
+Status atualizado: M1 e M2.5 implementados. M3–M5 implementados no [perfil gerenciado](MANAGED-RUNTIME.md), com limites explícitos (sandbox sem subprocessos, recuperação de ledger e remoto unary). O detalhamento abaixo preserva os critérios de projeto; extensões fora desses perfis permanecem abertas.
 
 ## M0 — Contrato revisável
 
@@ -8,7 +8,7 @@ Entregas: documentos de arquitetura, invariantes, lifecycle, protocolo, seguran�
 
 ## M1 — Composição local e propriedade real
 
-**Este é o ponto de partida da implementação.** Não começar pelo codec, pela rede ou pelo loop de agente.
+Marco local concluído na base M2.5. Seus testes continuam no gate de regressão.
 
 Escopo: componentes Rust confiáveis em um único processo; sem alegação de isolamento de código malicioso. Contratos já carregam identidade e geração para futura extensão.
 

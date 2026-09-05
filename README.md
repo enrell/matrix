@@ -2,7 +2,7 @@
 
 Kernel em Rust para composição espaço-temporal de componentes, com plugins independentes de linguagem e execução local ou remota.
 
-**Estado: scaffold experimental.** O kernel descrito na documentação é o objetivo de implementação; a composição espaço-temporal completa ainda não está disponível. Esta revisão altera documentação, não o runtime.
+**Estado: runtime experimental.** M1 e M2.5 têm implementação local; M3–M5 estão disponíveis no perfil gerenciado `matrix-managed`, com isolamento Linux, ledger durável e hosts por TLS. Consulte as garantias e limitações do [perfil gerenciado](docs/MANAGED-RUNTIME.md).
 
 Um code agent será uma aplicação montada sobre o Matrix: modelo, ferramentas, loop de execução, memória e interface serão componentes. O núcleo mantém contexto, propriedade, dependências, autorização e ciclo de vida.
 
@@ -15,7 +15,7 @@ Um code agent será uma aplicação montada sobre o Matrix: modelo, ferramentas,
 - [Primeiro marco e roadmap](docs/ROADMAP.md)
 - [Protocolo v0.1 em elaboração](docs/PROTOCOL.md)
 
-**Primeiro trabalho: M1 — contextos, recursos e dependências locais.** A prova é remover um provedor durante uma chamada, desativar consumidores, limpar recursos gerenciados e preservar um componente independente. Rede e agente real vêm depois dessa base.
+**Próxima aplicação: M6 — agente composto**, usando os perfis já validados. M3–M5 não tornam o loop simulado do SDK um agente real. [Operação, testes e configuração](docs/MANAGED-RUNTIME.md).
 
 ## Executar o scaffold existente
 
@@ -37,14 +37,17 @@ Em outro terminal, na mesma pasta, com a mesma variável:
 ./target/release/matrix-rt quit --json
 ```
 
-Validação existente: `cargo test -- --test-threads=1` e `make compat`. Não equivalem à conformidade proposta. Nenhum resultado de teste ou desempenho novo é reivindicado nesta revisão documental.
+Validação canônica: `make test` (release, exemplos atualizados, `--test-threads=1`). O [smoke gerenciado](scripts/smoke-managed.py) verifica a CLI, TLS, deduplicação, efeito com fencing e snapshot. Desempenho WAN e equivalência formal não foram demonstrados.
 
 ## Layout atual
 
 | Crate | Hoje |
 |---|---|
-| `matrix-core` | Registry, dispatch compilado, estado, bus e journal básicos |
-| `matrix-rt` | Daemon e CLI por socket Unix |
+| `matrix-core` | Contextos, recursos, dependências, tickets e lifecycle local |
+| `matrix-rt` | Daemon e CLI por socket Unix, perfil confiável |
+| `matrix-host` / `matrix-component` | Host e SDK de processos locais |
+| `matrix-guard` | Sandbox Linux e orçamento de supervisão |
+| `matrix-runtime` | Serviço gerenciado, SQLite e transporte TLS |
 | `matrix-sdk` | Cliente, interfaces Model/Tool e sequência fixa de agente |
 | `matrix-tui` | REPL e demonstração com modelo simulado |
 

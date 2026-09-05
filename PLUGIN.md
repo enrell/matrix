@@ -2,7 +2,8 @@
 
 ## Scaffold atual
 
-Hoje um manifest escolhe um reducer já compilado em `matrix-core`; não carrega código Rust/Python externo.
+Um manifest escolhe um reducer já compilado em `matrix-core` ou um
+processo externo executado pelo host local (`execution.process`).
 
 ```json
 {
@@ -25,7 +26,7 @@ Salve em `plugins/greeter.json` e use o daemon local:
 ./target/release/matrix-rt invoke 'greet.hello@1' '{"ping":true}' --json
 ```
 
-Reducers disponíveis no dispatch examinado: echo, counter, clock, ancient, model e noop; crasher é um caminho especial de injeção de falhas. `tier`, `trust` e `restart` não fornecem isolamento ou supervisão completos. O reload atual pode manter registros antigos; não usá-lo como prova de cleanup.
+Reducers disponíveis no dispatch examinado: echo, counter, clock, ancient, model e noop; crasher é um caminho especial de injeção de falhas. `tier`, `trust` e `restart` não fornecem isolamento ou supervisão completos.
 
 ## Dependências (`requires`, M1.2)
 
@@ -85,6 +86,46 @@ segue a política da operação, declarada por capability no manifest:
 - `pins: [handles]` na abertura impedem `release` prematuro
   (`resource-pinned`); limites finitos: 256 chamadas em voo, anel de 1024
   efeitos (`resource-exhausted` além disso).
+
+## Substituição coordenada (reload, M1.4)
+
+O reload valida candidatos sem publicá-los: manifest inválido mantém a
+geração vigente (recuperável, sem tocar no servindo). Manifests removidos
+do disco têm a definição reconciliada em cascata (o registro antigo some;
+`sys.reload` audita `reloaded`/`removed`/`failed`). Recarregar o provedor
+religa consumidores em novas gerações com bindings novos; `Disposed` nunca
+volta a `Active` — só o reconciliador cria a substituta.
+
+## Plugins externos e protocolo (M2)
+
+Processo local via socket Unix, protocolo `matrix.component` v0.1
+(frames u32 big-endian + JSON; 1 MiB por padrão):
+
+```json
+{
+  "id": "ext",
+  "version": "1.0.0",
+  "capabilities": ["echo.ext@1"],
+  "reducer": "external",
+  "execution": {
+    "kind": "process",
+    "entrypoint": "/caminho/ext_echo",
+    "args": ["--matrix-sock", "{sock}", "--id", "{id}"],
+    "timeout_ms": 5000
+  }
+}
+```
+
+- Sessão amarrada a (lógico, instância, geração); resposta antiga nunca
+  alimenta geração nova; `request_id` desconhecido é descartado.
+- Desconexão no meio da chamada = `outcome-unknown`, sem repetição.
+- Limites: 16 chamadas por sessão, 1024 respostas pendentes no host,
+  64 KiB de crédito inicial por stream (excesso encerra o stream, não a
+  sessão); frame acima do negociado derruba a sessão, não o host.
+- SDKs: `crates/matrix-component` (Rust) e `sdk-python/matrix_component.py`
+  (Python, só stdlib); o eco de referência existe nas duas linguagens e
+  passa a mesma suíte (`crates/matrix-host/tests/sdk.rs`). Streams ainda
+  não fazem parte da API dos SDKs.
 
 ## Contrato futuro
 

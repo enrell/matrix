@@ -1,5 +1,7 @@
 # Segurança e fronteiras de autoridade
 
+> Implementação disponível: [perfil gerenciado M3–M5](MANAGED-RUNTIME.md). Este documento preserva o contrato de projeto; consulte o perfil para saber quais mecanismos e transportes estão implementados.
+
 Status: requisitos propostos; o scaffold atual não oferece este modelo de segurança.
 
 ## Modelo de ameaça

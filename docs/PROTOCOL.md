@@ -1,5 +1,7 @@
 # Matrix Component Protocol — rascunho v0.1
 
+> Implementação disponível: [perfil gerenciado M3–M5](MANAGED-RUNTIME.md). Este documento preserva o contrato de projeto; consulte o perfil para saber quais mecanismos e transportes estão implementados.
+
 Nome de trabalho; não é API estável. O JSON por linha do scaffold é um protocolo legado separado. O novo listener deve negociar explicitamente este protocolo e nunca inferir compatibilidade por ambos possuírem um campo `v`.
 
 ## Semântica e perfis
