@@ -36,10 +36,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "matrix-component"
+version = "0.1.0"
+dependencies = [
+ "matrix-proto",
+ "serde_json",
+]
+
+[[package]]
 name = "matrix-core"
 version = "0.1.0"
 dependencies = [
  "parking_lot",
+ "serde_json",
+]
+
+[[package]]
+name = "matrix-host"
+version = "0.1.0"
+dependencies = [
+ "matrix-core",
+ "matrix-proto",
+ "serde_json",
+]
+
+[[package]]
+name = "matrix-proto"
+version = "0.1.0"
+dependencies = [
  "serde_json",
 ]
 

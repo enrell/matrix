@@ -1,51 +1,53 @@
-# Matrix — AI Agent Engine (infra, não um agent)
+# Matrix
 
-Infra para construir code agents (TUI, SDK, daemon, desktop) sobre a melhor
-engine medida no `agentlab` BPC: **master3-rt / síntese v3, FINAL 0.812**
-(`agentlab/analysis/EVAL.md:17`, `agentlab/master3/docs/REPORT.md`).
+Kernel em Rust para composição espaço-temporal de componentes, com plugins independentes de linguagem e execução local ou remota.
 
-Núcleo herdado (conceitos, reescritos — sem copiar crate):
+**Estado: scaffold experimental.** O kernel descrito na documentação é o objetivo de implementação; a composição espaço-temporal completa ainda não está disponível. Esta revisão altera documentação, não o runtime.
 
-* D-core: reducers puros + journal write-ahead + replay + tx + dry-run
-* Tier B-processo p/ `untrusted-heavy` (segv 1.4–2.7ms, bomb delta 0KB)
-* Tier A-wasm opt-in (`--features wasm`, epoch-trap p/ loop)
-* OTP `{intensity 5, period 10s} x {permanent,transient,temporary}`
-* Reload generacional único (S6 100/100/0), leases unilaterais,
-  envelopes versionados `"v":1` (compat S10/S15 pass)
+Um code agent será uma aplicação montada sobre o Matrix: modelo, ferramentas, loop de execução, memória e interface serão componentes. O núcleo mantém contexto, propriedade, dependências, autorização e ciclo de vida.
 
-## Layout
+## Comece aqui
 
-```text
-crates/matrix-core  # kernel lib: fsm/registry/journal/bus/kernel/leases
-crates/matrix-rt    # daemon + CLI (UDS run/matrix-rt.sock)
-crates/matrix-sdk   # client lib + traits Agent/Tool/Model + ReAct loop
-crates/matrix-tui   # REPL/TUI stub (ratatui entra aqui depois)
-plugins/            # manifests (ancient congelado)
-docs/ARCHITECTURE.md
-```
+- [Mapa da documentação](docs/README.md)
+- [Estado real do código](docs/STATUS.md)
+- [Arquitetura proposta](docs/ARCHITECTURE.md)
+- [Contrato e invariantes](docs/CONTRACT.md)
+- [Primeiro marco e roadmap](docs/ROADMAP.md)
+- [Protocolo v0.1 em elaboração](docs/PROTOCOL.md)
 
-## Quickstart (≤5 min)
+**Primeiro trabalho: M1 — contextos, recursos e dependências locais.** A prova é remover um provedor durante uma chamada, desativar consumidores, limpar recursos gerenciados e preservar um componente independente. Rede e agente real vêm depois dessa base.
+
+## Executar o scaffold existente
+
+Requer Rust/Cargo e ambiente Unix. Estes comandos são a interface atual, não implementações do protocolo futuro:
 
 ```sh
 cargo build --release
-./target/release/matrix-rt run --json &
-sleep 0.5
-./target/release/matrix-rt status --json
-./target/release/matrix-rt invoke 'echo.msg@1' '{"ping":true}' --json
-./target/release/matrix-rt invoke 'ancient.api@1' '{"in":41}' --json
-./target/release/matrix-rt emit sys.tick '{}' --json
-./target/release/matrix-rt invoke 'count.state@1' '{}' --json
-./target/release/matrix-rt reload --json
-./target/release/matrix-rt journal --tail 3
-./target/release/matrix-rt quit --json
-
-cargo test -- --test-threads=1
-make compat
+export MATRIX_RT_HOME="$PWD"
+./target/release/matrix-rt run --json
 ```
 
-Verbos (SPEC §1, cf. `master3/src/main.rs:158`): 
-`run|status|invoke|emit|reload|journal|reset|quit`.
+Em outro terminal, na mesma pasta, com a mesma variável:
 
-Docs: `CHARTER.md`, `PLUGIN.md`, `docs/ARCHITECTURE.md`.
-Proveniência: `agentlab/master3/{CHARTER,docs/DESIGN,docs/REPORT}` +
-`agentlab/analysis/{EVAL.md,properties.json}`.
+```sh
+./target/release/matrix-rt status --json
+./target/release/matrix-rt invoke 'echo.msg@1' '{"ping":true}' --json
+./target/release/matrix-rt emit sys.tick '{}' --json
+./target/release/matrix-rt invoke 'count.state@1' '{}' --json
+./target/release/matrix-rt quit --json
+```
+
+Validação existente: `cargo test -- --test-threads=1` e `make compat`. Não equivalem à conformidade proposta. Nenhum resultado de teste ou desempenho novo é reivindicado nesta revisão documental.
+
+## Layout atual
+
+| Crate | Hoje |
+|---|---|
+| `matrix-core` | Registry, dispatch compilado, estado, bus e journal básicos |
+| `matrix-rt` | Daemon e CLI por socket Unix |
+| `matrix-sdk` | Cliente, interfaces Model/Tool e sequência fixa de agente |
+| `matrix-tui` | REPL e demonstração com modelo simulado |
+
+[Direção do projeto](CHARTER.md) · [Plugins](PLUGIN.md) · [Referências](docs/REFERENCES.md)
+
+O scaffold deriva conceitualmente do master3/agentlab. Seu score `0.812` não é um resultado do Matrix. Documentos originais foram preservados em [history](docs/history/README.md).
