@@ -1,6 +1,6 @@
-//! Write-ahead journal: append buffered, `seq`-ordenado, replay = fold.
-//! Durabilidade total (batch-fsync) é roadmap; buffered já dá S9 fidelity 1.0
-//! no box (cf. master3 C5: buffered vence por 2.1× p/ mesma fidelidade).
+//! Write-ahead journal: buffered append, `seq`-ordered, replay = fold.
+//! Full durability (batch-fsync) is roadmap; buffered already gives S9 fidelity 1.0
+//! on the box (cf. master3 C5: buffered wins by 2.1x for the same fidelity).
 
 use parking_lot::Mutex;
 use serde_json::{json, Value};
@@ -77,7 +77,7 @@ impl Journal {
         });
         let line = serde_json::to_string(&e).unwrap_or_default() + "\n";
         let _ = i.file.write_all(line.as_bytes());
-        // buffered default (C5 winner); flush em reset/quit/test.
+        // buffered default (C5 winner); flush on reset/quit/test.
         i.seq
     }
 
@@ -95,7 +95,7 @@ impl Journal {
             path = i.path.clone();
             core_v2 = i.core_v2;
         }
-        // Trunca o arquivo e zera a sequência (isolamento de bench).
+        // Truncates the file and zeroes the sequence (bench isolation).
         std::fs::write(&path, "")?;
         let file = OpenOptions::new().create(true).append(true).open(&path)?;
         *self.inner.lock() = Inner { path, file, seq: 0, core_v2 };

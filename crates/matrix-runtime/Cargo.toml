@@ -1,0 +1,18 @@
+[package]
+name = "matrix-runtime"
+version = "0.1.0"
+edition = "2021"
+[dependencies]
+matrix-proto = { path = "../matrix-proto" }
+matrix-core = { path = "../matrix-core" }
+matrix-host = { path = "../matrix-host" }
+matrix-guard = { path = "../matrix-guard" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled", "backup"] }
+rustls = { version = "0.23", default-features = false, features = ["std", "ring", "tls12"] }
+sha2 = "0.10"
+libc = "0.2"
+
+[dev-dependencies]
+matrix-component = { path = "../matrix-component" }

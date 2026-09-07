@@ -1,9 +1,9 @@
 //! matrix-rt — daemon + CLI (UDS, blocking accept).
-//! Verbos SPEC §1: run/status/invoke/emit/reload/journal/reset/quit.
-//! Inspirado em `master3/src/main.rs` (accept bloqueante ban poll-sleep,
-//! thread-por-conexão, envelopes `{"v":1,...}`), reescrito do zero.
+//! SPEC §1 verbs: run/status/invoke/emit/reload/journal/reset/quit.
+//! Inspired by `master3/src/main.rs` (blocking accept bans poll-sleep,
+//! thread-per-connection, `{"v":1,...}` envelopes), rewritten from scratch.
 
-use matrix_core::{Journal, Kernel, PROTO_V};
+use matrix_core::{ContextId, Journal, Kernel, PROTO_V};
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -101,6 +101,10 @@ fn main() {
         }
         "status" => cli_exit_rpc_full("status", json!({}), true),
         "reload" => cli_exit_rpc("reload", json!({})),
+        "remove" => {
+            let id = args.first().cloned().unwrap_or_default();
+            cli_exit_rpc("remove", json!({"id": id}))
+        }
         "reset" => cli_exit_rpc("reset", json!({})),
         "quit" => cli_exit_rpc("quit", json!({})),
         "journal" => {
@@ -122,7 +126,7 @@ fn main() {
             std::process::exit(0);
         }
         _ => {
-            eprintln!("usage: matrix-rt <run|status|invoke|emit|reload|journal|reset|quit> [args] [--json]");
+            eprintln!("usage: matrix-rt <run|status|invoke|emit|reload|remove|journal|reset|quit> [args] [--json]");
             std::process::exit(2);
         }
     }
@@ -139,6 +143,11 @@ fn run_daemon(dry_run: bool, batch_fsync: bool, v2: bool) {
     let journal = Journal::open(&journal_path, v2, batch_fsync).expect("journal open");
     let k = Arc::new(Kernel::new(&h, journal, dry_run));
 
+    // Local host (M2.2+): runs `execution.process` plugins and delivers
+    // calls. Attached before loading to receive the Activated events.
+    let host = matrix_host::Host::attach(k.clone(), &run_dir.join("host"))
+        .expect("host attach");
+
     let mut loaded = 0usize;
     if k.plugins_dir.is_dir() {
         if let Ok(rd) = std::fs::read_dir(&k.plugins_dir) {
@@ -149,7 +158,7 @@ fn run_daemon(dry_run: bool, batch_fsync: bool, v2: bool) {
                 .collect();
             files.sort();
             for p in files {
-                // ancient.sha256 não é manifest
+                // ancient.sha256 is not a manifest
                 if p.file_name().and_then(|n| n.to_str()) == Some("ancient.sha256") {
                     continue;
                 }
@@ -194,6 +203,7 @@ fn run_daemon(dry_run: bool, batch_fsync: bool, v2: bool) {
             }
         }
     }
+    host.shutdown();
     k.journal.flush_sync();
     let _ = std::fs::remove_file(&sp);
 }
@@ -228,6 +238,11 @@ fn handle_conn(stream: UnixStream, k: &Kernel) {
             Ok(n) => json!({"v": PROTO_V, "ok": true, "reloaded": n}),
             Err(e) => json!({"v": PROTO_V, "ok": false, "error": e}),
         },
+        "remove" => {
+            let id = extra.get("id").and_then(|v| v.as_str()).unwrap_or("");
+            let out = k.dispose_plugin(id);
+            json!({"v": PROTO_V, "ok": true, "removed": id, "outcome": out.as_str()})
+        }
         "status" => {
             let ps = k.plugins.lock();
             let mut plugins: Vec<Value> = ps
@@ -235,7 +250,22 @@ fn handle_conn(stream: UnixStream, k: &Kernel) {
                 .map(|p| {
                     json!({"id": p.id, "state": p.state.as_str(), "tier": p.tier,
                            "trust": p.trust, "generation": p.generation,
-                           "restart": p.restart_policy_str(), "caps": p.caps})
+                           "restart": p.restart_policy_str(), "caps": p.caps,
+                           "requires": p.requires.iter().map(|r| {
+                               if let Some(pr) = &r.provider {
+                                   json!({"interface": r.interface, "provider": pr})
+                               } else {
+                                   json!({"interface": r.interface})
+                               }
+                           }).collect::<Vec<_>>(),
+                           "bindings": p.bindings.iter().map(|b| json!({
+                               "interface": b.interface, "provider": b.provider_logical,
+                               "instance": b.provider_instance, "generation": b.provider_generation,
+                           })).collect::<Vec<_>>(),
+                           "waiting_reason": p.wait_cause,
+                           "instance": p.instance_id, "context": p.context_id,
+                           "epoch": p.epoch,
+                           "active_resources": k.resources.active_for(ContextId(p.context_id))})
                 })
                 .collect();
             drop(ps);
@@ -245,7 +275,9 @@ fn handle_conn(stream: UnixStream, k: &Kernel) {
                 )
             });
             let n_caps = k.caps.len();
-            json!({"v": PROTO_V, "harness": "matrix", "plugins": plugins, "capabilities": n_caps})
+            let inv = k.inventory();
+            json!({"v": PROTO_V, "harness": "matrix", "plugins": plugins, "capabilities": n_caps,
+                   "epoch": k.epoch(), "inventory": inv})
         }
         "reset" => {
             k.reset_bench();

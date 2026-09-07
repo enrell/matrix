@@ -1,51 +1,57 @@
-# Matrix — AI Agent Engine (infra, não um agent)
+# Matrix
 
-Infra para construir code agents (TUI, SDK, daemon, desktop) sobre a melhor
-engine medida no `agentlab` BPC: **master3-rt / síntese v3, FINAL 0.812**
-(`agentlab/analysis/EVAL.md:17`, `agentlab/master3/docs/REPORT.md`).
+Kernel em Rust para composição espaço-temporal de componentes, com plugins independentes de linguagem e execução local ou remota.
 
-Núcleo herdado (conceitos, reescritos — sem copiar crate):
+**Estado: runtime experimental.** M1 e M2.5 têm implementação local; M3–M5 estão disponíveis no perfil gerenciado `matrix-managed`, com isolamento Linux, ledger durável e hosts por TLS. Consulte as garantias e limitações do [perfil gerenciado](docs/MANAGED-RUNTIME.md).
 
-* D-core: reducers puros + journal write-ahead + replay + tx + dry-run
-* Tier B-processo p/ `untrusted-heavy` (segv 1.4–2.7ms, bomb delta 0KB)
-* Tier A-wasm opt-in (`--features wasm`, epoch-trap p/ loop)
-* OTP `{intensity 5, period 10s} x {permanent,transient,temporary}`
-* Reload generacional único (S6 100/100/0), leases unilaterais,
-  envelopes versionados `"v":1` (compat S10/S15 pass)
+Matrix é somente o kernel genérico. Aplicações e componentes de negócio vivem em repositórios separados. O núcleo fornece contexto, propriedade, dependências, autorização e ciclo de vida para qualquer domínio que precise de composição espacial e temporal, dentro dos perfis suportados.
 
-## Layout
+## Comece aqui
 
-```text
-crates/matrix-core  # kernel lib: fsm/registry/journal/bus/kernel/leases
-crates/matrix-rt    # daemon + CLI (UDS run/matrix-rt.sock)
-crates/matrix-sdk   # client lib + traits Agent/Tool/Model + ReAct loop
-crates/matrix-tui   # REPL/TUI stub (ratatui entra aqui depois)
-plugins/            # manifests (ancient congelado)
-docs/ARCHITECTURE.md
-```
+- [Mapa da documentação](docs/README.md)
+- [Estado real do código](docs/STATUS.md)
+- [Arquitetura proposta](docs/ARCHITECTURE.md)
+- [Contrato e invariantes](docs/CONTRACT.md)
+- [Primeiro marco e roadmap](docs/ROADMAP.md)
+- [Protocolo v0.1 em elaboração](docs/PROTOCOL.md)
 
-## Quickstart (≤5 min)
+**Próximas fases: consolidação e composição genérica entre processos.** Consulte o [plano do kernel](docs/NEXT-PHASES.md) e a [operação dos perfis atuais](docs/MANAGED-RUNTIME.md). Abstrações de agente do scaffold legado (`Model`, `Tool`, `EchoTool`, `CannedModel`, `Agent`) e o crate `matrix-tui` (incluindo `--agent`) foram removidos em 2026-09-06 conforme o [plano de remoção](docs/KERNEL-CLEANUP.md); não fazem parte da API do kernel.
+
+## Executar o scaffold existente
+
+Requer Rust/Cargo e ambiente Unix. Estes comandos são a interface atual, não implementações do protocolo futuro:
 
 ```sh
 cargo build --release
-./target/release/matrix-rt run --json &
-sleep 0.5
-./target/release/matrix-rt status --json
-./target/release/matrix-rt invoke 'echo.msg@1' '{"ping":true}' --json
-./target/release/matrix-rt invoke 'ancient.api@1' '{"in":41}' --json
-./target/release/matrix-rt emit sys.tick '{}' --json
-./target/release/matrix-rt invoke 'count.state@1' '{}' --json
-./target/release/matrix-rt reload --json
-./target/release/matrix-rt journal --tail 3
-./target/release/matrix-rt quit --json
-
-cargo test -- --test-threads=1
-make compat
+export MATRIX_RT_HOME="$PWD"
+./target/release/matrix-rt run --json
 ```
 
-Verbos (SPEC §1, cf. `master3/src/main.rs:158`): 
-`run|status|invoke|emit|reload|journal|reset|quit`.
+Em outro terminal, na mesma pasta, com a mesma variável:
 
-Docs: `CHARTER.md`, `PLUGIN.md`, `docs/ARCHITECTURE.md`.
-Proveniência: `agentlab/master3/{CHARTER,docs/DESIGN,docs/REPORT}` +
-`agentlab/analysis/{EVAL.md,properties.json}`.
+```sh
+./target/release/matrix-rt status --json
+./target/release/matrix-rt invoke 'echo.msg@1' '{"ping":true}' --json
+./target/release/matrix-rt emit sys.tick '{}' --json
+./target/release/matrix-rt invoke 'count.state@1' '{}' --json
+./target/release/matrix-rt quit --json
+```
+
+Validação canônica: `make test` (release, exemplos atualizados, `--test-threads=1`). O [smoke gerenciado](scripts/smoke-managed.py) verifica a CLI, TLS, deduplicação, efeito com fencing e snapshot. Desempenho WAN e equivalência formal não foram demonstrados.
+
+## Layout atual
+
+| Crate | Hoje |
+|---|---|
+| `matrix-core` | Contextos, recursos, dependências, tickets e lifecycle local |
+| `matrix-rt` | Daemon e CLI por socket Unix, perfil confiável |
+| `matrix-host` / `matrix-component` | Host e SDK de processos locais |
+| `matrix-guard` | Sandbox Linux e orçamento de supervisão |
+| `matrix-runtime` | Serviço gerenciado, SQLite e transporte TLS |
+| `matrix-sdk` | Cliente genérico do daemon (socket Unix): `rpc`, `invoke`, `emit`, `status` |
+
+[Direção do projeto](CHARTER.md) · [Plugins](PLUGIN.md) · [Referências](docs/REFERENCES.md)
+
+> **Quebra de API (2026-09-06, [plano de remoção](docs/KERNEL-CLEANUP.md)):** `matrix-tui`, a flag `--agent` e os símbolos `Model`, `Tool`, `EchoTool`, `CannedModel` e `Agent` deixam de existir, sem shim. Consumidores externos desses símbolos precisam manter seu próprio código de aplicação; compatibilidade do protocolo do daemon e do contrato de plugins continua sendo requisito.
+
+O scaffold deriva conceitualmente do master3/agentlab. Seu score `0.812` não é um resultado do Matrix. Documentos originais foram preservados em [history](docs/history/README.md).

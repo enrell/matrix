@@ -7,7 +7,9 @@ build:
 	cargo build --release
 
 test:
+	cargo build --release -p matrix-host --examples
 	cargo test --release -- --test-threads=1
+	python3 sdk-python/test_units.py
 
 compat: build
 	@echo "-- ancient frozen (hash vivo, sem binário externo)"
