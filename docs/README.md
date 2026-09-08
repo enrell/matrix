@@ -22,6 +22,11 @@ O [perfil gerenciado M3–M5](MANAGED-RUNTIME.md) documenta a implementação ex
 | [Próximas fases](NEXT-PHASES.md) | Quais os incrementos e gates de M5.1 a M9? |
 | [Especificação M6.1](M6.1-SPEC.md) | Como componentes externos chamam dependências com autoridade e vínculo pai/filho? |
 | [Epic M7](M7-EPIC.md) | Qual a entrega completa de composição remota e como aceitá-la? |
+| [Epic M8](M8-EPIC.md) | Como tornar o kernel adotável por repositórios externos através de contratos públicos? |
+| [Catálogo de APIs](API-CATALOG.md) | Qual superfície é suportada, experimental, interna ou legada? |
+| [Instalação](INSTALL.md) | Como instalar de artefatos locais e operar o primeiro serviço? |
+| [Composição M8](M8-COMPOSITION.md) | O que foi entregue para adoção externa, evidência P01–P12 e runbooks? |
+| [Versões](VERSIONS.md) | Como evoluem API, SDKs, protocolos e formato persistente? |
 | [Perfil remoto M7](M7-PROFILE.md) | Qual o contrato de fio `matrix.remote/0.1`, ownership e limites? |
 | [Composição M6](M6-COMPOSITION.md) | O que foi entregue ponta a ponta, APIs efetivas e desvios da spec? |
 | [Composição M7](M7-COMPOSITION.md) | O que foi entregue entre hosts, garantias local×remoto, evidência R01–R13 e runbook? |

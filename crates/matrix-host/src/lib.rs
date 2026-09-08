@@ -2650,6 +2650,7 @@ impl Host {
         };
         // Egress quota is charged on the full payload once per subscriber.
         let bytes = serde_json::to_vec(payload).map(|b| b.len()).unwrap_or(0);
+
         let mut out = Vec::with_capacity(targets.len());
         for (sid, instance, generation) in targets {
             // Egress quota per subscriber (best effort: drops on exhaustion,

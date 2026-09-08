@@ -64,6 +64,8 @@ Fencing deve ser fiscalizado no destino de cada efeito protegido. O kernel forne
 
 ## M8 — Integração pública
 
+Plano de execução: [Epic M8](M8-EPIC.md). Entrega integrada com APIs, artefatos, conformidade e harness externo; M8.1–M8.4 são áreas de trabalho, sem aprovação intermediária. Aceitação P01–P12 e revisão ao final. Entrega: [M8-COMPOSITION](M8-COMPOSITION.md) (evidência P01–P12, limitações, runbooks).
+
 | Incremento | Entrega | Aceitação |
 |---|---|---|
 | M8.1 | API de biblioteca e modo serviço documentados | Harness externo usa modos suportados sem depender de módulos internos |

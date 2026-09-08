@@ -6,3 +6,7 @@
 
 __pycache__/
 *.pyc
+
+sdk-python/build/
+sdk-python/*.egg-info/
+dist/

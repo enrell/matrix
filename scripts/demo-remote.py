@@ -101,8 +101,6 @@ def main() -> int:
                                            [str(py_node), "--matrix-sock", "{sock}", "--id", "{id}"],
                                            {"requires": [{"interface": "prov.api@1", "provider": "prov"}],
                                             "outbound": {"request": ["prov.api@1"], "limits": OUTBOUND}}),
-                    {"manifest": {"id": "prov", "capabilities": ["prov.api@1"], "remote": True},
-                     "trusted": True},
                 ],
                 "grants": {fp: {"components": ["cons"],
                                 "capabilities": ["cons.chain@1"]}},

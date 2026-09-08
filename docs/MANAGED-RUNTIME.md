@@ -193,13 +193,51 @@ Configuração (`serve <config.json>`):
 
 ## Operação e rotação
 
-SIGTERM/SIGINT retira leases e encerra hosts. SIGHUP relê somente grants do config: retira as leases atuais antes de instalar os grants novos. Para trocar certificado/chave do servidor ou política de sandbox, faça restart controlado; clientes reconectam com lease nova. Não manter identidade antiga na lista se a intenção é revogá-la.
+SIGTERM/SIGINT retira leases e encerra hosts (o relatório de shutdown
+lista sessões abertas em vez de fingir sucesso). SIGHUP recarrega a
+configuração em duas fases: valida tudo antes de tocar o runtime
+(config inválido é rejeitado por inteiro, estado preservado); depois
+aplica grants (revogando removidos primeiro, sem alargar leases vivas
+silenciosamente), `outbound_grants` e rotas/peers remotos, relatando
+falhas parciais por área no stderr. Mudanças de listeners, TLS, home,
+sandbox e definição de componentes exigem restart controlado; clientes
+reconectam com lease nova. Não manter identidade antiga na lista se a
+intenção é revogá-la.
 
-Snapshot offline (falha se existir dono ativo):
+| Área | SIGHUP dinâmico | Exige restart |
+|---|---|---|
+| `grants` (adicionar/alterar) | sim (vale para leases novas) | — |
+| `grants` (remover principal) | sim (revoga antes de aplicar) | — |
+| `outbound_grants` | sim (sync imediato) | — |
+| `remotes.peers` / `remotes.routes` | sim (remove = unregister + release; adiciona = attach com backoff) | — |
+| `components` (adicionar/remover/trocar, inclusive só `sandbox`/`trusted`/`restart`) | não | sim |
+| `tls`, `remotes.session_*`, `home`, sandbox | não | sim |
+
+Atualização de componente (nova geração, refs antigas inválidas):
+`release` do lease antigo → `remove` → `provision` do novo manifest →
+`activate` (nova lease). Componentes independentes sobrevivem à cascata
+apropriada. Falha parcial de reload nunca aplica metade dos grants
+silenciosamente: o relatório diz o que aplicou e o que errou.
+
+Snapshot somente-leitura da origem (serviço parado; falha se houver
+dono ativo):
 
 ```sh
 ./target/release/matrix-managed snapshot /caminho/privado/matrix-state /backup/novo.sqlite
 ```
+
+Restauração validada (nunca sobrescreve estado existente; boot seguinte
+é abertura de recuperação — época avança, `admitted`→`unknown`, leases
+e sessões antigas não revivem, revogações persistem):
+
+```sh
+./target/release/matrix-managed restore /backup/novo.sqlite /caminho/novo/home
+```
+
+Snapshot online pelo dono também existe (`Runtime::snapshot_backup`).
+Corrompido ou com schema incompatível é recusado antes de entrar no
+caminho de restore. Detalhes, limites e testes: relatório M8
+(`docs/M8-COMPOSITION.md`, P09) e `crates/matrix-runtime/tests/backup_restore.rs`.
 
 A API Rust `Store::snapshot` também suporta snapshot online pelo próprio dono. Inspeção de `Service::inspect` mostra owner lógico, geração, pendências, falha/restart e tempo restante; não revela tokens. Uma resposta `outcome-unknown` pede consulta/reconciliação, nunca repetição automática da ação.
 

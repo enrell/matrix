@@ -79,7 +79,7 @@ Config gerenciada: `"outbound_grants": {"cons": ["prov.api@1"]}`.
 - Filhas remotas, federação, WASM e otimizações: fora (epic).
 - M6.4 formal (conformidade temporal completa): futuro; cascata,
   substituição e reintrodução estão cobertas por testes (`dep_flow`).
-- Snapshot do CLI ainda equivale a abertura de recuperação (R5, backlog).
+- Snapshot do CLI ainda equivale a abertura de recuperação (R5, backlog — resolvido na M8: snapshot virou somente-leitura, ver `M8-COMPOSITION.md` P09).
 - Fuzz de parser, duplicata entre sessões (C12, C14): backlog da auditoria
   M5.1. Consumidor-lento adversarial (C13) coberto por
   `slow_consumer_never_blocks_control`.

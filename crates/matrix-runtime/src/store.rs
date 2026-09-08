@@ -347,28 +347,115 @@ impl Store {
     /// Snapshot is a standalone SQLite database, including unknown operations,
     /// tombstones and fences. Existing paths never overwritten.
     pub fn snapshot(&self, path: &Path) -> Result<()> {
-        let file = OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .mode(0o600)
-            .open(path)
-            .map_err(err)?;
-        drop(file);
-        let db = self.db.lock().unwrap();
-        let mut dst = Connection::open(path).map_err(err)?;
-        let backup = rusqlite::backup::Backup::new(&db, &mut dst).map_err(err)?;
-        backup
-            .run_to_completion(128, std::time::Duration::from_millis(5), None)
-            .map_err(err)?;
-        drop(backup);
-        drop(dst);
-        File::open(path).map_err(err)?.sync_all().map_err(err)?;
-        File::open(path.parent().ok_or("no parent")?)
-            .map_err(err)?
-            .sync_all()
-            .map_err(err)?;
-        Ok(())
+        snapshot_connection(&self.db.lock().unwrap(), path)
     }
+
+    /// Opens a store image read-only for backup/validation (M8 P09).
+    /// Unlike [`Store::open`], this never advances the epoch, never flips
+    /// operation states, and never creates files: the origin is preserved
+    /// bit-for-bit. Refuses when another runtime exclusively owns the
+    /// store (stop the service first, or snapshot the live handle via
+    /// [`Store::snapshot`]) and when the image fails integrity or version
+    /// checks (corrupt/forged backups never enter the restore path).
+    pub fn open_read_only(path: &Path) -> Result<OfflineBackup> {
+        OfflineBackup::open(path)
+    }
+}
+
+/// A store image opened read-only: backup source and restore validator.
+/// Holds the shared lock for its whole lifetime, so no other runtime can
+/// take exclusive ownership mid-backup (the pre-fix race): the guard only
+/// drops when the copy/validation is done. Nothing is ever mutated.
+pub struct OfflineBackup {
+    db: Connection,
+    epoch: u64,
+    _guard: Option<File>,
+}
+
+impl OfflineBackup {
+    /// Schema versions this binary restores (see `docs/VERSIONS.md`).
+    pub const SUPPORTED_SCHEMA: i64 = 1;
+
+    pub fn open(path: &Path) -> Result<Self> {
+        if !path.is_file() {
+            return Err("no store image at path".into());
+        }
+        // Exclusivity policy: a live runtime owns its store exclusively.
+        // The shared guard lives in the returned handle: it is held for
+        // the whole backup/validation, so a concurrent open can neither
+        // start mid-copy nor mutate under it.
+        let guard = if let Ok(g) = OpenOptions::new().read(true).open(path.with_extension("lock")) {
+            if unsafe { libc::flock(g.as_raw_fd(), libc::LOCK_SH | libc::LOCK_NB) } != 0 {
+                return Err("store owned by a live runtime; stop the service or snapshot it online".into());
+            }
+            Some(g)
+        } else {
+            None
+        };
+        let db = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .map_err(|e| format!("store corrupt or not a database: {e}"))?;
+        let schema: i64 = db
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .map_err(|e| format!("store corrupt or unreadable: {e}"))?;
+        if schema != Self::SUPPORTED_SCHEMA {
+            return Err(format!("unsupported store schema {schema}; refusing version change"));
+        }
+        let check: String = db
+            .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+            .map_err(|e| format!("store corrupt or unreadable: {e}"))?;
+        if check != "ok" {
+            return Err(format!("store corrupt: {check}"));
+        }
+        let epoch: i64 = db
+            .query_row("SELECT value FROM meta WHERE key='epoch'", [], |r| r.get(0))
+            .map_err(|_| "store image without epoch".to_string())?;
+        Ok(Self { db, epoch: epoch as u64, _guard: guard })
+    }
+
+    /// Epoch recorded in the image (boot counter at last recovery open).
+    pub fn epoch(&self) -> u64 {
+        self.epoch
+    }
+
+    /// Operation counts by state (`admitted`/`completed`/`unknown`).
+    pub fn operation_states(&self) -> std::collections::HashMap<String, u64> {
+        self.db
+            .prepare("SELECT state, COUNT(*) FROM operations GROUP BY state")
+            .and_then(|mut q| {
+                q.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))
+                    .map(|rows| rows.filter_map(|r| r.ok()).map(|(k, v)| (k, v as u64)).collect())
+            })
+            .unwrap_or_default()
+    }
+
+    /// Copies the image to a new standalone database (existing paths
+    /// never overwritten; permissions 0600; fsynced).
+    pub fn copy_to(&self, dest: &Path) -> Result<()> {
+        snapshot_connection(&self.db, dest)
+    }
+}
+
+fn snapshot_connection(db: &Connection, path: &Path) -> Result<()> {
+    let file = OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .mode(0o600)
+        .open(path)
+        .map_err(err)?;
+    drop(file);
+    let mut dst = Connection::open(path).map_err(err)?;
+    let backup = rusqlite::backup::Backup::new(db, &mut dst).map_err(err)?;
+    backup
+        .run_to_completion(128, std::time::Duration::from_millis(5), None)
+        .map_err(err)?;
+    drop(backup);
+    drop(dst);
+    File::open(path).map_err(err)?.sync_all().map_err(err)?;
+    File::open(path.parent().ok_or("no parent")?)
+        .map_err(err)?
+        .sync_all()
+        .map_err(err)?;
+    Ok(())
 }
 
 #[cfg(test)]

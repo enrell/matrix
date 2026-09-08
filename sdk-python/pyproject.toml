@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "matrix-component"
+version = "0.1.0"
+description = "Matrix external-component SDK (M8 experimental contract surface)"
+readme = "README.md"
+requires-python = ">=3.10"
+# No license metadata: this repository ships no license file. The sdist
+# and wheel below are local validation artifacts only (M8 P01/P12) —
+# not for registry publication or redistribution.
+
+[tool.setuptools]
+py-modules = ["matrix_component"]

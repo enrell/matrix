@@ -453,6 +453,11 @@ impl Service {
             .map(|l| (l.logical.clone(), l.owner.clone()))
     }
 
+    /// Live leases currently held (operator diagnosis; tokens never leave).
+    pub fn live_lease_count(&self) -> usize {
+        self.state.lock().unwrap().leases.len()
+    }
+
     /// Grant check factored for the route (same rule as `invoke`).
     pub fn grant_covers(&self, principal: &str, cap: &str) -> bool {
         let s = self.state.lock().unwrap();
