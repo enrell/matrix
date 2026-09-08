@@ -26,6 +26,21 @@ ledger cross this boundary.
   (`Handler.on_call/on_cancel/on_event/on_stream`,
   `ctx.invoke_dependency/acquire_resource/release_resource/send_stream`,
   `event_dropped_count/pending_stream_count`).
+- ML1 language SDKs (all `0.1.0`, experimental; `docs/ML1-MATRIX.md`
+  is the normative per-language matrix, `docs/ML1-NODE.md` the shared
+  node contract):
+  - JS/TS `matrix-component` (`sdk/js/`, npm tarball, zero deps,
+    `index.d.ts` for typed TS; plain JS needs no compiler),
+  - Go `matrix-component-go` (`sdk/go/`, stdlib only),
+  - Crystal `matrix-component` shard (`sdk/crystal/`, stdlib only),
+  - Elixir `:matrix_component` (`sdk/elixir/`, stdlib + OTP `:json`),
+  - C# `Matrix.Component` (`sdk/csharp/`, no NuGet packages),
+  - C `matrix-component` (`sdk/c/`, C11 + POSIX, CMake +
+    pkg-config) and C++ `cpp/matrix.hpp` (C++17 RAII over the C
+    transport, same package).
+  - Every SDK ships both surfaces: hosted component AND
+    operator/application client (`start` owns, `connect` attaches),
+    plus scaffolding, environment doctor, and loopback suites.
 - Wire protocols (implementable without our SDKs):
   `matrix.component/0.1` (`docs/PROTOCOL.md`, `matrix-proto` schemas +
   vectors) and `matrix.remote/0.1` (`docs/M7-PROFILE.md`).

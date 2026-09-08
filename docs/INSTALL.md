@@ -33,6 +33,26 @@ python3 -c "import sys; sys.path.insert(0, 'third_party/matrix_component-0.1.0-p
 Contract reference is `docs/SDK.md`; parity with the Rust crate is
 covered by `test_units.py` on both sides.
 
+## ML1 language SDKs (per-language packs in `dist/ml1/`)
+
+Same offline rules per ecosystem (see `docs/ML1-MATRIX.md` for versions
+and `templates/README.md` inside each generated project for the recipe):
+
+```sh
+python3 -m venv .venv && .venv/bin/pip install --no-index dist/ml1/matrix_component-*.whl
+npm install --offline --no-audit --no-fund dist/ml1/matrix-component-*.tgz
+# Go: copy dist/ml1/go, add `replace matrix-component-go => ./go`, GOPROXY=off
+# Crystal: copy dist/ml1/crystal (zero shard deps, `shards build` offline)
+# Elixir: `{:matrix_component, path: "dist/ml1/elixir"}` (no Hex deps, OTP >= 27)
+# C#: copy dist/ml1/csharp (`dotnet build`, zero NuGet packages)
+# C/C++: cmake -B build -DMATRIX_ENABLE_CPP=ON && cmake --build build (no deps)
+```
+
+Each SDK also ships a scaffold (`scaffold.sh`, or `matrix-scaffold`
+for JS) that vendors SDK sources into a fresh project and builds the
+generic test node, plus an environment doctor (`matrix-doctor`) that
+prints JSON diagnosis with secrets redacted.
+
 ## Rust crates
 
 Depend on extracted copies (complete artifacts — `dist/crates/*`),

@@ -18,5 +18,14 @@ check() { # $1=label $2...=files/dirs (grep -rEn, fail on match)
 }
 FORBID='matrix_runtime::(service|store|session|route_controller|route_executor|remote|remote_session_server)|matrix_core::|matrix_host::|matrix_proto::|matrix_guard::|matrix_sdk::|matrix_rt::|#[path\s*=|include!|/home/|/root/|projects/matrix'
 check "harness-rs" "$ROOT/scripts/harness-external.sh"
+check "harness-ml1" "$ROOT/scripts/harness-ml1.sh" "$ROOT/scripts/test-ml1.sh"
 check "facade-test" "$ROOT/crates/matrix-runtime/tests/api_facade.rs" "$ROOT/crates/matrix-runtime/tests/backup_restore.rs"
+# ML1 SDK sources (excluding build outputs) stay on the public surface too.
+ML1SRC=$(find "$ROOT/sdk" "$ROOT/sdk-python" -type f \( -name '*.sh' -o -name '*.js' -o -name '*.ts' -o -name '*.go' -o -name '*.cr' -o -name '*.ex' -o -name '*.exs' -o -name '*.cs' -o -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' -o -name '*.py' \) -not -path '*/obj/*' -not -path '*/bin/*' -not -path '*/node_modules/*' -not -path '*/_build/*' -not -path '*/__pycache__/*')
+if echo "$ML1SRC" | xargs grep -rEn "$FORBID" 2>/dev/null | grep -v "^.*://"; then
+  echo "FAIL bounds ml1-sdk"
+  FAIL=1
+else
+  echo "ok bounds ml1-sdk"
+fi
 exit $FAIL

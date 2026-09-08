@@ -77,6 +77,8 @@ Harness externo pode ser temporário e mínimo. Marketplace, UX de instalação 
 
 ## M9 — Eficiência
 
+Frente adicional de adoção após M8: [Epic ML1 — SDKs multilíngues](MULTILANGUAGE-EPIC.md), **entregue** ([composição](ML1-COMPOSITION.md), [matriz](ML1-MATRIX.md)). Define serviço local e SDKs idiomáticos para Python, JS/TS, Go, Crystal, Elixir, C#, C++ e C, com entrega integrada e conformidade comum. Não renumera M9 nem depende de otimizações. Follow-up kernel registrado em ML1 (reload sob concorrência deixa de aplicar em silêncio) é candidato a M9, sem bloquear adoção.
+
 Medir latência p50/p95/p99, throughput, CPU, memória, filas, lifecycle, IPC, transporte e armazenamento. Publicar ambiente, carga e dados brutos; separar custo do kernel do trabalho dos plugins.
 
 Investigar conexões persistentes, cópias, scheduler ou formato de mensagens a partir de gargalos medidos. Repetir conformidade após otimizações. Comparações exigem semântica, isolamento, durabilidade e carga equivalentes; Rust por si só não comprova vantagem ponta a ponta.

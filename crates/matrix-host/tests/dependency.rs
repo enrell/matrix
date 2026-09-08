@@ -15,7 +15,7 @@ use matrix_core::{Journal, Kernel};
 use matrix_host::{Host, HostPolicy};
 use matrix_proto::{encode, parse_frame_payload, read_frame, DEFAULT_MAX_FRAME};
 use serde_json::{json, Value};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -298,7 +298,7 @@ fn rig_chained(max_seen: u64, grant: bool) -> (Rig, String, matrix_core::TicketI
     (r, bs[0].id.clone(), parent)
 }
 
-fn open_as(r: &Rig, rs: &mut RawSession, mid: &str, rid: &str, binding: &str, parent: matrix_core::TicketId) -> Value {
+fn open_as(_r: &Rig, rs: &mut RawSession, mid: &str, rid: &str, binding: &str, parent: matrix_core::TicketId) -> Value {
     rs.dep_with_ids("dependency.open", mid, rid, json!({
         "parent_ticket": parent.0.to_string(),
         "binding_id": binding, "timeout_ms": 1500, "input": {"value": 42},

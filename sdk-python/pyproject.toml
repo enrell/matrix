@@ -13,4 +13,4 @@ requires-python = ">=3.10"
 # not for registry publication or redistribution.
 
 [tool.setuptools]
-py-modules = ["matrix_component"]
+py-modules = ["matrix_component", "matrix_operator"]

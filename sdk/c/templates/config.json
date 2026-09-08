@@ -1,0 +1,60 @@
+{
+  "home": "@HOME@",
+  "components": [
+    {
+      "manifest": {
+        "id": "prov",
+        "capabilities": ["prov.echo@1"],
+        "execution": {
+          "kind": "process",
+          "entrypoint": "@NODE@",
+          "args": ["--matrix-sock", "{sock}", "--id", "{id}"]
+        }
+      },
+      "trusted": true
+    },
+    {
+      "manifest": {
+        "id": "cons",
+        "capabilities": ["cons.chain@1"],
+        "requires": [{"interface": "prov.echo@1", "provider": "prov"}],
+        "outbound": {"request": ["prov.echo@1"], "limits": {
+          "max_depth": 3, "max_children_per_parent": 4,
+          "max_calls_per_session": 16, "max_calls_global": 64,
+          "max_seen_requests": 64, "max_queued_bytes": 65536,
+          "max_deadline_ms": 12000}},
+        "execution": {
+          "kind": "process",
+          "entrypoint": "@NODE@",
+          "args": ["--matrix-sock", "{sock}", "--id", "{id}"]
+        }
+      },
+      "trusted": true
+    },
+    {
+      "manifest": {
+        "id": "indep",
+        "capabilities": ["indep.echo@1"],
+        "execution": {
+          "kind": "process",
+          "entrypoint": "@NODE@",
+          "args": ["--matrix-sock", "{sock}", "--id", "{id}"]
+        }
+      },
+      "trusted": true
+    }
+  ],
+  "grants": {
+    "@FINGERPRINT@": {
+      "components": ["prov", "cons", "indep"],
+      "capabilities": ["prov.echo@1", "cons.chain@1", "indep.echo@1"]
+    }
+  },
+  "outbound_grants": {"cons": ["prov.echo@1"]},
+  "tls": {
+    "listen": "127.0.0.1:0",
+    "ca": "@PKI@/ca.der",
+    "cert": "@PKI@/server.der",
+    "key": "@PKI@/server-key.der"
+  }
+}

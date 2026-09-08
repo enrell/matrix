@@ -98,7 +98,7 @@ fn binding_of(k: &Kernel) -> String {
     bs[0].id.clone()
 }
 
-fn open_parent(k: &Kernel, p: &Pair) -> matrix_core::TicketId {
+fn open_parent(k: &Kernel, _p: &Pair) -> matrix_core::TicketId {
     k.call_open("cons.cap@1", &json!({}), Some(CallPolicy::cancel()), &[])
         .expect("pai abre")
         .ticket

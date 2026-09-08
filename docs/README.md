@@ -23,6 +23,7 @@ O [perfil gerenciado M3–M5](MANAGED-RUNTIME.md) documenta a implementação ex
 | [Especificação M6.1](M6.1-SPEC.md) | Como componentes externos chamam dependências com autoridade e vínculo pai/filho? |
 | [Epic M7](M7-EPIC.md) | Qual a entrega completa de composição remota e como aceitá-la? |
 | [Epic M8](M8-EPIC.md) | Como tornar o kernel adotável por repositórios externos através de contratos públicos? |
+| [Epic ML1 — SDKs multilíngues](MULTILANGUAGE-EPIC.md) | Como usar Matrix de forma idiomática em Python, JS/TS, Go, Crystal, Elixir, C#, C++ e C? |
 | [Catálogo de APIs](API-CATALOG.md) | Qual superfície é suportada, experimental, interna ou legada? |
 | [Instalação](INSTALL.md) | Como instalar de artefatos locais e operar o primeiro serviço? |
 | [Composição M8](M8-COMPOSITION.md) | O que foi entregue para adoção externa, evidência P01–P12 e runbooks? |

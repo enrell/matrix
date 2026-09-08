@@ -10,3 +10,11 @@ __pycache__/
 sdk-python/build/
 sdk-python/*.egg-info/
 dist/
+
+# ML1 build outputs (never committed; harness stages fresh copies)
+sdk/csharp/**/obj/
+sdk/csharp/**/bin/
+sdk/js/node_modules/
+sdk/elixir/_build/
+sdk/elixir/erl_crash.dump
+sdk/elixir/mx-node

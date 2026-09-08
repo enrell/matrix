@@ -1,0 +1,18 @@
+name: matrix-component
+version: 0.1.0
+description: >
+  Matrix external-component SDK for Crystal (ML1 experimental contract
+  surface). Speaks matrix.component/0.1: handshake, registration,
+  activation, calls, dependencies, resources, events and streams.
+  Local validation artifact only — not for registry publication.
+
+authors:
+  - Matrix kernel project <noreply@example.invalid>
+
+crystal: ">= 1.0.0, < 2.0.0"
+
+targets:
+  mx-node:
+    main: examples/node.cr
+  matrix-doctor:
+    main: examples/doctor.cr
