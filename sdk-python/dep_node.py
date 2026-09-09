@@ -2,6 +2,9 @@
 
 Usage: ``dep_node.py --matrix-sock <sock> --id <logical>``
 Same semantics as ``crates/matrix-host/examples/dep_node.rs``:
+Keys match in this order, first wins: ``sleep_ms``, ``fail``,
+``amplify``, ``chain_with_streams``, ``chain``, ``acquire``,
+``release``, ``stream_send``, otherwise echo.
 - ``input.chain``: invokes the first binding's dependency with
   ``input.input`` and answers ``{"chained": ..., "via": id}``;
   child errors become business errors with the same code;
@@ -26,7 +29,19 @@ import threading
 import time
 
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
+
 from matrix_component import Component, DepError, Handler, ResError
+
+_U64MAX = (1 << 64) - 1
+
+
+def _u64(value, default):
+    """int in u64 range, else default (mirrors Rust `as_u64().unwrap_or`)."""
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int) and 0 <= value <= _U64MAX:
+        return value
+    return default
 
 
 class Node(Handler):
@@ -55,11 +70,10 @@ class Node(Handler):
                 pass
 
     def on_call(self, ctx, ticket: str, cap: str, input: dict, cancel: threading.Event):
-        sleep_ms = input.get("sleep_ms", 0)
-        try:
-            sleep_ms = int(sleep_ms)
-        except (TypeError, ValueError):
-            sleep_ms = 0
+        # Branch order mirrors dep_node.rs (first matching key wins):
+        # sleep, fail, amplify, chain_with_streams, chain, acquire,
+        # release, stream_send, otherwise echo.
+        sleep_ms = _u64(input.get("sleep_ms"), 0)
         slept = 0
         while slept < sleep_ms:
             if cancel.is_set():
@@ -67,80 +81,24 @@ class Node(Handler):
             time.sleep(0.005)
             slept += 5
         fail = input.get("fail")
-        if isinstance(fail, str) and fail:
+        if isinstance(fail, str):
             return ("error", fail, f"remote {fail}")
-        if isinstance(input.get("amplify"), int):
-            n = min(max(int(input["amplify"]), 0), 1 << 20)
-            return {"blob": "x" * n, "via": self.logical}
-        if input.get("chain"):
-            bindings = ctx.dependencies()
-            if not bindings:
-                return ("error", "dependency-unavailable", "no binding")
-            inner = input.get("input") or {}
-            timeout_ms = input.get("timeout_ms", 5000)
-            try:
-                timeout_ms = int(timeout_ms)
-            except (TypeError, ValueError):
-                timeout_ms = 5000
-            try:
-                out = ctx.invoke_dependency(bindings[0]["id"], inner, max(timeout_ms, 1) / 1000.0)
-            except DepError as exc:
-                return ("error", exc.code, exc.message)
-            return {"chained": out, "via": self.logical}
-        if isinstance(input.get("acquire"), dict):
-            acq = input["acquire"]
-            try:
-                ms = acq.get("interval_ms")
-                handle = ctx.acquire_resource(
-                    str(acq.get("kind", "")), str(acq.get("label", "")),
-                    int(ms) if ms is not None else None)
-            except ResError as exc:
-                return ("error", exc.code, exc.message)
-            except (TypeError, ValueError) as exc:
-                return ("error", "invalid-message", f"bad acquire: {exc}")
-            return {"acquired": {"handle": str(handle)}, "via": self.logical}
-        if "release" in input:
-            try:
-                ctx.release_resource(int(input["release"]))
-            except ResError as exc:
-                return ("error", exc.code, exc.message)
-            except (TypeError, ValueError) as exc:
-                return ("error", "invalid-message", f"bad release: {exc}")
-            return {"released": str(input["release"]), "via": self.logical}
-        if isinstance(input.get("stream_send"), dict):
-            spec = input["stream_send"]
-            stream_id = str(spec.get("stream_id", "s-test"))
-            try:
-                chunks = min(max(int(spec.get("chunks", 0)), 0), 256)
-                nbytes = min(max(int(spec.get("chunk_bytes", 0)), 0), 4096)
-                sleep_ms = max(int(spec.get("sleep_ms", 0) or 0), 0)
-            except (TypeError, ValueError):
-                return ("error", "invalid-message", "bad stream_send")
-            payload = "x" * nbytes
-            sent = 0
-            for seq in range(chunks):
-                if cancel.is_set():
-                    return ("error", "cancelled", "aborted")
-                try:
-                    ctx.send_stream(stream_id, seq, payload)
-                except (OSError, ValueError) as exc:
-                    return ("error", "stream-refused", str(exc))
-                sent += 1
-                if sleep_ms > 0:
-                    time.sleep(min(sleep_ms, 50) / 1000.0)
-            return {"stream_sent": sent, "via": self.logical}
-        if isinstance(input.get("chain_with_streams"), dict):
+        amp = input.get("amplify")
+        if isinstance(amp, int) and not isinstance(amp, bool):
+            return {"blob": "x" * min(amp, 1 << 20), "via": self.logical}
+        if "chain_with_streams" in input:
             # Concurrent chain + streams (M7 bidi): stream on a thread
             # while the child leg is in flight on this same session.
             spec = input["chain_with_streams"]
-            stream_id = str(spec.get("stream_id", "s-bidi"))
-            try:
-                chunks = min(max(int(spec.get("chunks", 0)), 0), 32)
-                nbytes = min(max(int(spec.get("chunk_bytes", 0)), 0), 1024)
-                interval_ms = min(max(int(spec.get("interval_ms", 20) or 20), 0), 50)
-                prime_ms = min(max(int(spec.get("prime_ms", 50) or 50), 0), 1000)
-            except (TypeError, ValueError):
-                return ("error", "invalid-message", "bad chain_with_streams")
+            if not isinstance(spec, dict):
+                spec = {}
+            stream_id = spec.get("stream_id")
+            if not isinstance(stream_id, str):
+                stream_id = "s-bidi"
+            chunks = min(_u64(spec.get("chunks"), 0), 32)
+            nbytes = min(_u64(spec.get("chunk_bytes"), 0), 1024)
+            interval_ms = min(_u64(spec.get("interval_ms"), 20), 50)
+            prime_ms = min(_u64(spec.get("prime_ms"), 50), 1000)
             payload = "x" * nbytes
             sent_box = [0]
 
@@ -163,13 +121,7 @@ class Node(Handler):
                 streamer.join()
                 return ("error", "dependency-unavailable", "no binding")
             inner = spec.get("input", {})
-            if not isinstance(inner, dict):
-                inner = {}
-            timeout_s = spec.get("timeout_ms", 8000)
-            try:
-                timeout_s = max(float(timeout_s), 1.0) / 1000.0
-            except (TypeError, ValueError):
-                timeout_s = 8.0
+            timeout_s = max(_u64(spec.get("timeout_ms"), 8000), 1) / 1000.0
             try:
                 out = ctx.invoke_dependency(bindings[0]["id"], inner, timeout_s)
             except DepError as exc:
@@ -177,6 +129,60 @@ class Node(Handler):
                 return ("error", exc.code, exc.message)
             streamer.join()
             return {"chained": out, "via": self.logical, "stream_sent": sent_box[0]}
+        if input.get("chain") is True:
+            bindings = ctx.dependencies()
+            if not bindings:
+                return ("error", "dependency-unavailable", "no binding")
+            inner = input.get("input", {})
+            timeout_ms = max(_u64(input.get("timeout_ms"), 5000), 1)
+            try:
+                out = ctx.invoke_dependency(bindings[0]["id"], inner, timeout_ms / 1000.0)
+            except DepError as exc:
+                return ("error", exc.code, exc.message)
+            return {"chained": out, "via": self.logical}
+        if "acquire" in input:
+            acq = input["acquire"]
+            if not isinstance(acq, dict):
+                acq = {}
+            kind = acq.get("kind")
+            kind = kind if isinstance(kind, str) else ""
+            label = acq.get("label")
+            label = label if isinstance(label, str) else ""
+            try:
+                handle = ctx.acquire_resource(kind, label, _u64(acq.get("interval_ms"), None))
+            except ResError as exc:
+                return ("error", exc.code, exc.message)
+            return {"acquired": {"handle": str(handle)}, "via": self.logical}
+        rel = input.get("release")
+        if (isinstance(rel, int) and not isinstance(rel, bool) and 0 <= rel <= _U64MAX):
+            try:
+                ctx.release_resource(rel)
+            except ResError as exc:
+                return ("error", exc.code, exc.message)
+            return {"released": str(rel), "via": self.logical}
+        if "stream_send" in input:
+            spec = input["stream_send"]
+            if not isinstance(spec, dict):
+                spec = {}
+            stream_id = spec.get("stream_id")
+            if not isinstance(stream_id, str):
+                stream_id = "s-test"
+            chunks = min(_u64(spec.get("chunks"), 0), 256)
+            nbytes = min(_u64(spec.get("chunk_bytes"), 0), 4096)
+            sleep_ms = _u64(spec.get("sleep_ms"), 0)
+            payload = "x" * nbytes
+            sent = 0
+            for seq in range(chunks):
+                if cancel.is_set():
+                    return ("error", "cancelled", "aborted")
+                try:
+                    ctx.send_stream(stream_id, seq, payload)
+                except (OSError, ValueError) as exc:
+                    return ("error", "stream-refused", str(exc))
+                sent += 1
+                if sleep_ms > 0:
+                    time.sleep(min(sleep_ms, 50) / 1000.0)
+            return {"stream_sent": sent, "via": self.logical}
         return {"echo": input, "via": self.logical}
 
 
@@ -190,11 +196,14 @@ def main() -> int:
     args = ap.parse_args()
     try:
         comp = Component.connect(args.matrix_sock, args.id)
-    except (AssertionError, OSError) as exc:
+    except (AssertionError, OSError, ValueError) as exc:
         print(f"connect: {exc}", file=sys.stderr)
         return 2
-    comp.serve(Node(args.id, args.event_log, args.stream_log, args.stream_slow_ms / 1000.0))
-    return 0
+    reason = comp.serve(Node(args.id, args.event_log, args.stream_log, args.stream_slow_ms / 1000.0))
+    if reason in ("dispose", "eof"):
+        return 0
+    print(f"serve: {reason}", file=sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@
 #include "matrix.hpp"
 
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -26,61 +27,146 @@ void append_line(const std::string &path, const std::string &line) {
         f << line << "\n";
 }
 
-// Minimal JSON field helpers over the raw input (the node only needs
-// a few shapes; the SDK owns the real parser).
+// Top-level member lookup over the raw input. The node only needs a few
+// shapes, but nested objects (chain `input`, stream specs) may repeat a
+// top-level key (e.g. spec `sleep_ms` shadowing the sleep branch), so
+// first-occurrence search is wrong: only depth-1 members match. Strings
+// (with backslash escapes) are skipped while scanning.
+std::size_t find_top(const std::string &in, const std::string &key) {
+    int depth = 0;
+    bool in_str = false;
+    for (std::size_t i = 0; i < in.size(); ++i) {
+        char c = in[i];
+        if (in_str) {
+            if (c == '\\')
+                ++i;
+            else if (c == '"')
+                in_str = false;
+            continue;
+        }
+        if (c == '"') {
+            if (depth == 1 && in.compare(i + 1, key.size(), key) == 0 &&
+                i + 2 + key.size() <= in.size() && in[i + 1 + key.size()] == '"') {
+                std::size_t j = i + 2 + key.size();
+                while (j < in.size() && (in[j] == ' ' || in[j] == '\t' || in[j] == '\n' || in[j] == '\r'))
+                    ++j;
+                if (j < in.size() && in[j] == ':')
+                    return j + 1;
+            }
+            in_str = true;
+            continue;
+        }
+        if (c == '{' || c == '[')
+            ++depth;
+        else if (c == '}' || c == ']')
+            --depth;
+    }
+    return std::string::npos;
+}
+static std::size_t skip_ws(const std::string &in, std::size_t i) {
+    while (i < in.size() && (in[i] == ' ' || in[i] == '\t' || in[i] == '\n' || in[i] == '\r'))
+        ++i;
+    return i;
+}
 bool has_true(const std::string &in, const std::string &key) {
-    auto p = in.find("\"" + key + "\"");
+    auto p = find_top(in, key);
     if (p == std::string::npos)
         return false;
-    auto q = in.find("true", p);
-    auto e = in.find_first_of(",}", p);
-    return q != std::string::npos && e != std::string::npos && q < e;
+    return in.compare(skip_ws(in, p), 4, "true") == 0;
 }
 std::string get_str(const std::string &in, const std::string &key) {
-    auto p = in.find("\"" + key + "\"");
+    auto p = find_top(in, key);
     if (p == std::string::npos)
         return "";
-    auto c = in.find(':', p);
-    if (c == std::string::npos)
+    p = skip_ws(in, p);
+    if (p >= in.size() || in[p] != '"')
         return "";
-    auto q1 = in.find('"', c);
-    if (q1 == std::string::npos)
-        return "";
-    auto q2 = in.find('"', q1 + 1);
-    if (q2 == std::string::npos)
-        return "";
-    return in.substr(q1 + 1, q2 - q1 - 1);
+    std::string o;
+    for (std::size_t i = p + 1; i < in.size(); ++i) {
+        if (in[i] == '\\' && i + 1 < in.size()) {
+            o += in[i + 1];
+            ++i;
+        } else if (in[i] == '"') {
+            return o;
+        } else {
+            o += in[i];
+        }
+    }
+    return "";
 }
 long long get_int(const std::string &in, const std::string &key, long long dflt) {
-    auto p = in.find("\"" + key + "\"");
+    auto p = find_top(in, key);
     if (p == std::string::npos)
         return dflt;
-    auto c = in.find(':', p);
-    if (c == std::string::npos)
-        return dflt;
     try {
-        return std::stoll(in.substr(c + 1));
+        return std::stoll(in.substr(skip_ws(in, p)));
     } catch (...) {
         return dflt;
     }
 }
+// Numeric or decimal-string u64 (handles cross the wire as decimal
+// strings; both spellings are accepted like the C/C# nodes).
+bool get_release(const std::string &in, std::uint64_t &out) {
+    auto p = find_top(in, "release");
+    if (p == std::string::npos)
+        return false;
+    p = skip_ws(in, p);
+    if (p >= in.size())
+        return false;
+    if (in[p] == '"') {
+        std::size_t q = in.find('"', p + 1);
+        if (q == std::string::npos)
+            return false;
+        std::string tok = in.substr(p + 1, q - p - 1);
+        if (tok.empty() || tok[0] == '-' || tok[0] == '+')
+            return false;
+        try {
+            std::size_t pos = 0;
+            unsigned long long v = std::stoull(tok, &pos);
+            if (pos != tok.size())
+                return false;
+            out = static_cast<std::uint64_t>(v);
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
+    try {
+        std::size_t pos = 0;
+        long long v = std::stoll(in.substr(p), &pos);
+        if (pos == 0 || v < 0)
+            return false;
+        out = static_cast<std::uint64_t>(v);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
 std::string sub_object(const std::string &in, const std::string &key) {
-    auto p = in.find("\"" + key + "\"");
+    auto p = find_top(in, key);
     if (p == std::string::npos)
         return "{}";
-    auto c = in.find(':', p);
-    if (c == std::string::npos)
-        return "{}";
-    auto b = in.find('{', c);
-    if (b == std::string::npos)
+    p = skip_ws(in, p);
+    if (p >= in.size() || in[p] != '{')
         return "{}";
     int depth = 0;
-    for (std::size_t i = b; i < in.size(); ++i) {
-        if (in[i] == '{')
+    bool in_str = false;
+    for (std::size_t i = p; i < in.size(); ++i) {
+        char c = in[i];
+        if (in_str) {
+            if (c == '\\')
+                ++i;
+            else if (c == '"')
+                in_str = false;
+            continue;
+        }
+        if (c == '"') {
+            in_str = true;
+        } else if (c == '{') {
             ++depth;
-        else if (in[i] == '}') {
+        } else if (c == '}') {
             if (--depth == 0)
-                return in.substr(b, i - b + 1);
+                return in.substr(p, i - p + 1);
         }
     }
     return "{}";
@@ -109,8 +195,7 @@ public:
         if (!fail.empty())
             throw mx::BusinessError(fail, "remote " + fail);
         // amplify / chain / acquire / release / streams mirror node.c.
-        auto amp_p = input.find("\"amplify\"");
-        if (amp_p != std::string::npos) {
+        if (find_top(input, "amplify") != std::string::npos) {
             long long n = get_int(input, "amplify", 0);
             n = std::max<long long>(0, std::min<long long>(n, 1 << 20));
             return "{\"blob\":\"" + std::string(static_cast<std::size_t>(n), 'x') +
@@ -125,8 +210,7 @@ public:
                                                     static_cast<unsigned long long>(timeout));
             return "{\"chained\":" + out + ",\"via\":" + quote(g_id) + "}";
         }
-        auto acq_p = input.find("\"acquire\"");
-        if (acq_p != std::string::npos) {
+        if (find_top(input, "acquire") != std::string::npos) {
             std::string acq = sub_object(input, "acquire");
             long long ms = get_int(acq, "interval_ms", -1);
             std::uint64_t h = ctx.acquire_resource(get_str(acq, "kind"), get_str(acq, "label"),
@@ -134,13 +218,14 @@ public:
             return "{\"acquired\":{\"handle\":\"" + std::to_string(h) +
                    "\"},\"via\":" + quote(g_id) + "}";
         }
-        if (input.find("\"release\"") != std::string::npos) {
-            std::uint64_t h = static_cast<std::uint64_t>(get_int(input, "release", -1));
+        if (find_top(input, "release") != std::string::npos) {
+            std::uint64_t h = 0;
+            if (!get_release(input, h))
+                throw mx::BusinessError("invalid-message", "bad release");
             ctx.release_resource(h);
             return "{\"released\":\"" + std::to_string(h) + "\",\"via\":" + quote(g_id) + "}";
         }
-        auto ss_p = input.find("\"stream_send\"");
-        if (ss_p != std::string::npos) {
+        if (find_top(input, "stream_send") != std::string::npos) {
             std::string spec = sub_object(input, "stream_send");
             std::string sid = get_str(spec, "stream_id");
             if (sid.empty())
@@ -153,7 +238,11 @@ public:
             for (long long seq = 0; seq < chunks; ++seq) {
                 if (ctx.cancelled())
                     throw mx::BusinessError("cancelled", "aborted");
-                ctx.send_stream(sid, static_cast<std::uint64_t>(seq), payload);
+                try {
+                    ctx.send_stream(sid, static_cast<std::uint64_t>(seq), payload);
+                } catch (const mx::Error &e) {
+                    throw mx::BusinessError("stream-refused", e.what());
+                }
                 ++sent;
                 if (slp > 0) {
                     long long s = std::min(slp, 50LL);
@@ -166,7 +255,7 @@ public:
             }
             return "{\"stream_sent\":" + std::to_string(sent) + ",\"via\":" + quote(g_id) + "}";
         }
-        if (input.find("\"chain_with_streams\"") != std::string::npos) {
+        if (find_top(input, "chain_with_streams") != std::string::npos) {
             // Concurrent chain + streams (M7 bidi legs): streams while
             // the child leg is in flight on this same session.
             std::string spec = sub_object(input, "chain_with_streams");

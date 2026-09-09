@@ -71,7 +71,8 @@ class Node extends Handler {
       const bindings = ctx.dependencies();
       if (!bindings.length) throw Object.assign(new Error("no binding"), { code: "dependency-unavailable" });
       const inner = input.input && typeof input.input === "object" ? input.input : {};
-      const timeoutMs = Math.max(Number(input.timeout_ms || 5000), 1);
+      const rawTimeout = Number(input.timeout_ms ?? 5000);
+      const timeoutMs = Math.max(Number.isFinite(rawTimeout) ? rawTimeout : 5000, 1);
       const out = await ctx.invokeDependency(bindings[0].id, inner, timeoutMs / 1000);
       return { chained: out, via: this.id };
     }
@@ -136,7 +137,8 @@ class Node extends Handler {
         throw Object.assign(new Error("no binding"), { code: "dependency-unavailable" });
       }
       const inner = spec.input && typeof spec.input === "object" ? spec.input : {};
-      const timeoutMs = Math.max(Number(spec.timeout_ms || 8000), 1);
+      const rawTimeout = Number(spec.timeout_ms ?? 8000);
+      const timeoutMs = Math.max(Number.isFinite(rawTimeout) ? rawTimeout : 8000, 1);
       let chainedOut;
       try {
         chainedOut = await ctx.invokeDependency(bindings[0].id, inner, timeoutMs / 1000);

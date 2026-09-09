@@ -113,7 +113,7 @@ def main() -> int:
             slow = threading.Thread(
                 target=lambda: box.update(invoke(
                     cons_creds, "cons.chain@1",
-                    {"chain": True, "input": {"sleep_ms": 30000}}, "demo-2")))
+                    {"chain": True, "input": {"sleep_ms": 15000}}, "demo-2")))
             slow.start()
             time.sleep(1.0)
             # Trabalho em voo segura a retirada (I07): estaciona e revoga.
@@ -122,7 +122,8 @@ def main() -> int:
             slow.join(timeout=25)
             assert not slow.is_alive(), "child never settled after withdraw"
             assert not box.get("ok", False), f"sucesso falso: {box}"
-            print("2. mid-execution withdraw denies with no false success:", box.get("error", box))
+            assert box.get("value", {}).get("code") == "cancelled", box
+            print("2. mid-execution withdraw denies with no false success:", box.get("value"))
             w = invoke(indep_creds, "indep.echo@1", {"ping": 1}, "demo-indep")
             assert w["ok"], f"independent still serving: {w}"
             print("   independent stays responsive during withdraw")
@@ -145,7 +146,27 @@ def main() -> int:
             assert v["ok"], v
             v = invoke(cons_creds, "cons.chain@1", {"release": handle}, "demo-6")
             assert not v["ok"], f"duplo release deveria negar: {v}"
+            assert v["value"]["code"] == "invalid-message", v
             print("4. external resources acquire/release/deny OK (handle %d)" % handle)
+
+            # 5. Bounded streams + bidi legs (C26): exact chunk counts, and
+            # the bidi leg keeps the child open so chunks bind to it.
+            # stream_send needs no bindings: drive the Python node directly.
+            v = invoke(prov_creds, "prov.api@1",
+                       {"stream_send": {"stream_id": "s-demo", "chunks": 8, "chunk_bytes": 64}},
+                       "demo-7")
+            assert v["ok"] and v["value"]["stream_sent"] == 8, v
+            print("5. stream_send 8x64 OK (stream_sent 8)")
+            v = invoke(cons_creds, "cons.chain@1",
+                       {"chain_with_streams": {"stream_id": "s-bidi", "chunks": 8,
+                                              "chunk_bytes": 64,
+                                              "input": {"sleep_ms": 500, "value": 9}}},
+                       "demo-8")
+            assert v["ok"], v
+            assert v["value"]["stream_sent"] == 8, v
+            assert v["value"]["chained"]["echo"]["value"] == 9, v
+            assert v["value"]["chained"]["via"] == "prov", v
+            print("6. chain_with_streams bidi leg OK (stream_sent 8, chained via prov)")
         finally:
             server.terminate()
             try:

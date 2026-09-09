@@ -33,14 +33,23 @@ with tempfile.TemporaryDirectory(prefix="matrix-managed-smoke-") as directory:
         def request(body):
             command = [str(binary), "request", str(pki / "ca.der"), str(pki / "client.der"), str(pki / "client-key.der"), ready["listen"], "localhost", json.dumps(body)]
             return json.loads(subprocess.check_output(command, text=True, timeout=10))
+        def request_raw(body):
+            command = [str(binary), "request", str(pki / "ca.der"), str(pki / "client.der"), str(pki / "client-key.der"), ready["listen"], "localhost", json.dumps(body)]
+            proc = subprocess.run(command, text=True, timeout=10, capture_output=True)
+            return proc.returncode, (proc.stdout.strip() or proc.stderr.strip())
         lease = request({"action": "activate", "component": "echo", "ttl_ms": 10000})
         credentials = {"lease": lease["lease"], "fence": lease["fence"]}
         call = {"action": "invoke", **credentials, "operation": "smoke-call", "cap": "echo.msg@1", "input": {"ping": True}}
         result = request(call)
         assert result["ok"] and result["value"]["echo"]["ping"]
         assert request(call) == result
+        divergent = dict(call, input={"ping": False})
+        rc, out = request_raw(divergent)
+        assert rc != 0 and "operation-id-conflict" in out, (rc, out)
         assert request({"action": "effect.commit", **credentials, "operation": "smoke-effect", "key": "result", "value": 42})["committed"]
         assert request({"action": "release", **credentials})["state"] == "Disposed"
+        rc, out = request_raw({"action": "status", **credentials})
+        assert rc != 0 and "stale-generation" in out, (rc, out)
     finally:
         server.terminate()
         try:

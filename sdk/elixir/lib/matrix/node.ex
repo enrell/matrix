@@ -107,29 +107,26 @@ defmodule Matrix.Node do
   end
 
   defp dispatch(ctx, st, %{"acquire" => acq}) when is_map(acq) do
+    interval =
+      if is_integer(acq["interval_ms"]) and acq["interval_ms"] >= 0,
+        do: acq["interval_ms"],
+        else: nil
+
     try do
-      h = CallCtx.acquire_resource(ctx, to_string(acq["kind"] || ""), to_string(acq["label"] || ""), acq["interval_ms"])
+      h = CallCtx.acquire_resource(ctx, to_string(acq["kind"] || ""), to_string(acq["label"] || ""), interval)
       {:ok, %{"acquired" => %{"handle" => to_string(h)}, "via" => st.id}}
     rescue
       e in Matrix.Errors.ResError -> {:error, e.code, e.message}
     end
   end
 
-  defp dispatch(ctx, st, %{"release" => rel}) do
-    h =
-      cond do
-        is_integer(rel) and rel >= 0 -> rel
-        is_binary(rel) ->
-          case Integer.parse(rel) do
-            {n, ""} when n >= 0 -> n
-            _ -> raise %BusinessError{code: "invalid-message", message: "bad release"}
-          end
-        true -> raise %BusinessError{code: "invalid-message", message: "bad release"}
-      end
-
+  # Numeric handles only (mirrors dep_node.rs `as_u64`): a present but
+  # non-numeric `release` falls through to echo via the catch-all below,
+  # so a string "0" echoes instead of releasing.
+  defp dispatch(ctx, st, %{"release" => rel}) when is_integer(rel) and rel >= 0 do
     try do
-      :ok = CallCtx.release_resource(ctx, h)
-      {:ok, %{"released" => to_string(h), "via" => st.id}}
+      :ok = CallCtx.release_resource(ctx, rel)
+      {:ok, %{"released" => to_string(rel), "via" => st.id}}
     rescue
       e in Matrix.Errors.ResError -> {:error, e.code, e.message}
     end
@@ -180,11 +177,10 @@ defmodule Matrix.Node do
     stream_id = if is_binary(spec["stream_id"]), do: spec["stream_id"], else: "s-bidi"
     chunks = clamp_int(spec["chunks"], 0, 32)
     nbytes = clamp_int(spec["chunk_bytes"], 0, 1024)
-    interval = clamp_int(spec["interval_ms"] || 20, 0, 50)
-    prime = clamp_int(spec["prime_ms"] || 50, 0, 1000)
     payload = String.duplicate("x", nbytes)
+    interval = if is_integer(spec["interval_ms"]), do: clamp_int(spec["interval_ms"], 0, 50), else: 20
+    prime = if is_integer(spec["prime_ms"]), do: clamp_int(spec["prime_ms"], 0, 1000), else: 50
     me = self()
-
     streamer =
       spawn(fn ->
         if prime > 0, do: Process.sleep(prime)

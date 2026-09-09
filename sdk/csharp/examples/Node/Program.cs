@@ -84,7 +84,8 @@ sealed class Node : Handler
             input = JsonDocument.Parse("{}").RootElement;
         if (Num(input, "sleep_ms", out var sleepN) && sleepN > 0)
         {
-            try { await AbortableSleepAsync((int)sleepN, cancel).ConfigureAwait(false); }
+            int sleepMs = sleepN >= int.MaxValue ? int.MaxValue : (int)sleepN;
+            try { await AbortableSleepAsync(sleepMs, cancel).ConfigureAwait(false); }
             catch (OperationCanceledException) { throw new ComponentError("cancelled", "aborted"); }
         }
         var fail = Str(input, "fail");
@@ -126,10 +127,18 @@ sealed class Node : Handler
         }
         if (input.TryGetProperty("release", out var relEl))
         {
-            ulong h = 0;
+            ulong h;
             if (relEl.ValueKind == JsonValueKind.Number)
-                h = relEl.GetUInt64();
-            else if (relEl.ValueKind == JsonValueKind.String && !ulong.TryParse(relEl.GetString(), out h))
+            {
+                if (!relEl.TryGetUInt64(out h))
+                    throw new ComponentError("invalid-message", "bad release");
+            }
+            else if (relEl.ValueKind == JsonValueKind.String)
+            {
+                if (!ulong.TryParse(relEl.GetString(), out h))
+                    throw new ComponentError("invalid-message", "bad release");
+            }
+            else
                 throw new ComponentError("invalid-message", "bad release");
             await ctx.ReleaseResourceAsync(h, cancel).ConfigureAwait(false);
             return new Dictionary<string, object?> { ["released"] = h.ToString(), ["via"] = _id };
@@ -152,7 +161,8 @@ sealed class Node : Handler
             long sent = 0;
             for (long seq = 0; seq < chunks; seq++)
             {
-                cancel.ThrowIfCancellationRequested();
+                if (cancel.IsCancellationRequested)
+                    throw new ComponentError("cancelled", "aborted");
                 try
                 {
                     await ctx.SendStreamAsync(streamId, (ulong)seq, payload, cancel)
@@ -160,7 +170,13 @@ sealed class Node : Handler
                 }
                 catch (SdkError e)
                 {
+                    if (cancel.IsCancellationRequested)
+                        throw new ComponentError("cancelled", "aborted");
                     throw new ComponentError("stream-refused", e.Detail);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw new ComponentError("cancelled", "aborted");
                 }
                 sent++;
                 if (slp > 0)

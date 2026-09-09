@@ -68,7 +68,8 @@ class Node < Matrix::Handler
       end
     end
     if (acq = input["acquire"]?) && acq.as_h?
-      ms = acq["interval_ms"]?.try(&.as_i64?).try &.to_u64
+      iv = acq["interval_ms"]?.try(&.as_i64?)
+      ms = iv && iv >= 0 ? iv.to_u64 : nil
       begin
         h = ctx.acquire_resource(acq["kind"]?.try(&.as_s?) || "",
           acq["label"]?.try(&.as_s?) || "", ms)
@@ -80,13 +81,15 @@ class Node < Matrix::Handler
         raise Matrix::BusinessError.new(ex.code, ex.detail)
       end
     end
-    if (rel = input["release"]?)
-      h = rel.as_i64?.try(&.to_u64) || rel.as_s?.try(&.to_u64?) ||
-        raise Matrix::BusinessError.new("invalid-message", "bad release")
+    # Numeric handles only (dep_node.rs `as_u64`): a present but
+    # non-numeric `release` falls through to echo below, so a string
+    # "0" echoes instead of releasing.
+    if (h = input["release"]?.try(&.as_i64?)) && h >= 0
+      uh = h.to_u64
       begin
-        ctx.release_resource(h)
+        ctx.release_resource(uh)
         return JSON::Any.new({
-          "released" => JSON::Any.new(rel.as_s? || h.to_s),
+          "released" => JSON::Any.new(uh.to_s),
           "via"      => JSON::Any.new(@id),
         })
       rescue ex : Matrix::ResError
@@ -211,4 +214,8 @@ rescue ex
   exit 2
 end
 reason = comp.serve(Node.new(id, event_log, stream_log, stream_slow_ms))
-exit(reason == "dispose" || reason == "eof" ? 0 : 1)
+unless reason == "dispose" || reason == "eof"
+  STDERR.puts "serve: #{reason}"
+  exit 1
+end
+exit 0

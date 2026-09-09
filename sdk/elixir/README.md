@@ -30,9 +30,9 @@ defmodule Echo do
 
   @impl true
   def on_call(ctx, _ticket, _cap, input, _ref) do
-    if input["chain"] do
+    if input["chain"] == true do
       [first | _] = Matrix.CallCtx.dependencies(ctx)
-      out = Matrix.CallCtx.invoke_dependency(ctx, first.id, input["input"], 5_000)
+      out = Matrix.CallCtx.invoke_dependency(ctx, first.id, input["input"] || %{}, 5_000)
       {:ok, %{"chained" => out}}
     else
       {:ok, %{"echo" => input}}
