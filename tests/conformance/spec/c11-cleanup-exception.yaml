@@ -1,0 +1,24 @@
+name: c11-cleanup-exception
+goal: handler error still runs reverse cleanup, residue is CleanupPending
+GIVEN:
+  kernel: staged matrix-managed from dist/bin
+  component: prov mx-node (any language) with prov.echo@1
+  pki: staged via scripts/dev-pki.py into HARNESS_DIR/work/pki
+WHEN:
+  - serve config with one prov component
+  - activate prov with ttl_ms 30000
+  - invoke acquire timer resource, then invoke {"fail": "BOOM"}
+  - dispose prov session and query shutdown report
+THEN:
+  - assert acquire minted: '"acquired":[ ]*\{'
+  - assert fail is business error: 'BOOM'
+  - assert cleanup ran reverse: shutdown report lists timer released
+  - assert residue explicit: 'CleanupPending' iff handle still held
+INVARIANTS:
+  - no orphan leases: active lease count == 0 after release
+  - no orphan socks: no mx-node sock files remain under HARNESS_DIR
+  - no orphan pids: pgrep -f matrix-managed and mx-node empty
+  - no secrets in logs: no lease token or client-key material in harness.log
+CLEANUP:
+  - kill recorded PIDS, wait, rm -rf HARNESS_DIR/work sockets
+  - on failure: keep HARNESS_DIR/work/harness.log for triage

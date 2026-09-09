@@ -1,0 +1,24 @@
+name: fuzz
+goal: seeded grammar over frames/ops finds no crash or corruption
+GIVEN:
+  kernel: staged matrix-managed from dist/bin
+  component: prov mx-node (any language) with prov.echo@1
+  corpus: deterministic seed + grammar (frame sizes, op ids, sleep/chain/acquire inputs)
+WHEN:
+  - generate N cases from seed, each with fresh op ids, replayable order
+  - run deterministic base pass, then mutated pass (sizes, interleavings, cancels)
+  - shrink minimal failing case on first red (delta-debug to smallest input)
+  - re-run shrunk case twice to confirm determinism
+THEN:
+  - assert no crash: every case ends ok / business-error / stable denial
+  - assert no corruption: u64 exact, text-only refusal, no lossy bytes
+  - assert replay stable: same seed re-run yields identical terminal set
+  - assert shrunk case kept: minimal input + seed recorded in failures log
+INVARIANTS:
+  - text-only refusal holds on every case: never corrupt, always explicit error
+  - no orphan leases: active lease count == 0 after release
+  - no orphan pids: pgrep -f matrix-managed and mx-node empty
+  - no secrets in logs: no lease token or client-key material in harness.log
+CLEANUP:
+  - kill recorded PIDS, wait, rm -rf HARNESS_DIR/work sockets
+  - on failure: keep HARNESS_DIR/work/harness.log for triage

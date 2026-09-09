@@ -1,0 +1,25 @@
+name: c20-callee-crash
+goal: provider SIGKILL mid-call is terminal non-ok, never ghost-succeeds
+GIVEN:
+  kernel: staged matrix-managed from dist/bin
+  component: prov mx-node (any language) with prov.echo@1
+  pki: staged via scripts/dev-pki.py into HARNESS_DIR/work/pki
+WHEN:
+  - serve config with one prov component
+  - activate prov with ttl_ms 30000
+  - invoke prov with {"sleep_ms": 8000} and fresh op id Op1 (async)
+  - SIGKILL prov pid mid-call, await terminal with deadline 15s
+  - re-emit Op1 identically and await reply
+THEN:
+  - assert terminal non-ok: no '"ok":[ ]*true' on crashed call
+  - assert provider gone: prov pid dead, supervisor notified
+  - assert no ghost success: re-emit of Op1 never returns '"ok":[ ]*true'
+  - assert error stable: reply matches 'terminated|aborted|unknown'
+INVARIANTS:
+  - no orphan leases: active lease count == 0 after release
+  - no orphan socks: no mx-node sock files remain under HARNESS_DIR
+  - no orphan pids: pgrep -f matrix-managed and mx-node empty
+  - no secrets in logs: no lease token or client-key material in harness.log
+CLEANUP:
+  - kill recorded PIDS, wait, rm -rf HARNESS_DIR/work sockets
+  - on failure: keep HARNESS_DIR/work/harness.log for triage

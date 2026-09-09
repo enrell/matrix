@@ -1,0 +1,24 @@
+name: c07-grants
+goal: outbound_grants authorize chain; missing grant denies stably
+GIVEN:
+  kernel: staged matrix-managed from dist/bin
+  components: cons + prov mx-nodes (same language), prov serves prov.api@1
+  pki: staged via scripts/dev-pki.py into HARNESS_DIR/work/pki
+WHEN:
+  - serve config with cons, prov, and outbound_grants {cons: [prov.api@1]}
+  - activate cons and prov with ttl_ms 30000
+  - invoke cons with input {"chain": true} and fresh op id
+  - reload config without outbound_grants, invoke cons chain again
+THEN:
+  - assert granted chain ok: '"ok":[ ]*true'
+  - assert chained payload: '"chained":[ ]*\{'
+  - assert revoked chain denies: 'permission-denied'
+  - assert denial is not ok: no '"ok":[ ]*true' on denied reply
+INVARIANTS:
+  - no orphan leases: active lease count == 0 after release
+  - no orphan socks: no mx-node sock files remain under HARNESS_DIR
+  - no orphan pids: pgrep -f matrix-managed and mx-node empty
+  - no secrets in logs: no lease token or client-key material in harness.log
+CLEANUP:
+  - kill recorded PIDS, wait, rm -rf HARNESS_DIR/work sockets
+  - on failure: keep HARNESS_DIR/work/harness.log for triage

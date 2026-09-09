@@ -1,0 +1,26 @@
+name: nxn-interop
+goal: mandated pairs + chain3 green; --full covers all 81 ordered pairs
+GIVEN:
+  nodes: 9 staged mx-nodes (py js go cr ex cs c cpp rs) per ML1-NODE.md CLI
+  kernel: staged matrix-managed from dist/bin
+  pki: staged via scripts/dev-pki.py into HARNESS_DIR/work/pki
+WHEN:
+  - serve per-pair config: cons->prov with outbound_grants, fresh op id per pair
+  - mandated pairs: py<->js, go<->cs, cr<->ex, c<->cpp (both directions listed)
+  - rust in both roles: rs->lang and lang->rs legs
+  - chain3: js->go->rs consumer->mid->provider bindings
+  - remote leg: Crystal cons -> Elixir prov via operator-configured route
+  - --full only: all 81 ordered pairs (9x9) plus chain3 permutations
+THEN:
+  - assert each pair chains: '"chained":[ ]*\{'
+  - assert provider via: '"via":[ ]*"(prov-lang)"'
+  - assert chain3 triple-nested: three chained levels ending in rs echo
+  - assert default skips --full: CI gates mandated subset for time
+INVARIANTS:
+  - op-id fresh per pair: never reuse an operation id across pairs
+  - no orphan leases: active lease count == 0 after release
+  - no orphan pids: pgrep -f matrix-managed and mx-node empty
+  - no secrets in logs: no lease token or client-key material in harness.log
+CLEANUP:
+  - kill recorded PIDS, wait, rm -rf HARNESS_DIR/work sockets
+  - on failure: keep HARNESS_DIR/work/harness.log for triage

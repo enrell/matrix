@@ -1,0 +1,25 @@
+name: c07-chain
+goal: cons chains to prov through an outbound grant; chained echo round-trips
+GIVEN:
+  kernel: staged matrix-managed from dist/bin
+  components: cons (cons.chain@1, requires prov.echo@1) + prov (prov.echo@1)
+  grants: client fingerprint over both components and capabilities
+  outbound_grants: {"cons": ["prov.echo@1"]} with mkchain limits
+  pki: staged via scripts/dev-pki.py into HARNESS_DIR/work/pki
+WHEN:
+  - serve config with cons + prov (staged dep_node entrypoint, restart policy)
+  - activate prov, wait_ready; activate cons, wait_ready
+  - invoke cons.chain@1 op-c07-1 with {"chain": true, "input": {"hello": "world"}}
+  - release cons, release prov, then stop kernel
+THEN:
+  - assert invoke ok true: '"ok":[ ]*true'
+  - assert chained echo: '"chained":[ ]*\{"echo":[ ]*\{"hello":[ ]*"world"\}'
+  - assert releases report Disposed: '"state":[ ]*"Disposed"'
+  - assert post-release status calls denied (stale-generation)
+INVARIANTS:
+  - no orphan leases/pids; ss -xa empty for $H at once (live socket fails)
+  - host.sock file may persist (runtime never unlinks): log and remove, not FAIL
+  - no secrets in logs (lease tokens only inside captured substitutions)
+CLEANUP:
+  - kill recorded PIDS, wait, remove stale sock files under HARNESS_DIR
+  - on failure: keep HARNESS_DIR/work/harness.log for triage

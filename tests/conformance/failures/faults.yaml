@@ -1,0 +1,35 @@
+name: faults
+goal: every fault class denies deterministically with a stable code
+FAULTS:
+  - id: missing-cap
+    GIVEN: active prov exposing only prov.echo@1
+    WHEN: invoke unprovisioned cap other.cap@1 with fresh op id
+    THEN: assert stable denial, no execution, no '"ok":[ ]*true'
+  - id: missing-grant
+    GIVEN: cons without outbound_grants entry for prov.api@1
+    WHEN: invoke cons with {"chain": true}
+    THEN: assert 'permission-denied', provider never called, no '"ok":[ ]*true'
+  - id: oversize-payload
+    GIVEN: active prov with 1MiB frame/body limit
+    WHEN: invoke echo with payload larger than 1MiB
+    THEN: assert size refusal, connection stays usable, no truncation
+  - id: handler-fail
+    GIVEN: active prov serving echo
+    WHEN: invoke with {"fail": "CODE"}
+    THEN: assert business error 'CODE', served as remote CODE upstream
+  - id: kill-mid-call
+    GIVEN: in-flight {"sleep_ms": 8000} call as op Op1
+    WHEN: SIGKILL prov pid mid-call, await terminal (15s deadline)
+    THEN: assert terminal non-ok, re-emit of Op1 never '"ok":[ ]*true'
+  - id: sighup-reload
+    GIVEN: running service with grants for principal P
+    WHEN: SIGHUP config removing P, await settled form (not single-shot)
+    THEN: assert revoked invoke denies, pre-reload state preserved on bad config
+  - id: acquire-before-fail
+    GIVEN: active prov session
+    WHEN: acquire timer resource, then invoke {"fail": "BOOM"}, then dispose
+    THEN: assert reverse-order cleanup in report, residue is 'CleanupPending'
+  - id: concurrent-during-teardown
+    GIVEN: N parallel invokes in flight
+    WHEN: SIGTERM service mid-flight, await shutdown report
+    THEN: assert every op settles exactly once, report lists open sessions
