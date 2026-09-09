@@ -104,37 +104,25 @@ long long get_int(const std::string &in, const std::string &key, long long dflt)
         return dflt;
     }
 }
-// Numeric or decimal-string u64 (handles cross the wire as decimal
-// strings; both spellings are accepted like the C/C# nodes).
+// Numeric-only u64 (Rust dep_node reference: only a non-negative
+// integer JSON number takes the release branch; strings, floats,
+// bools and bad shapes fall through to echo).
 bool get_release(const std::string &in, std::uint64_t &out) {
     auto p = find_top(in, "release");
     if (p == std::string::npos)
         return false;
     p = skip_ws(in, p);
-    if (p >= in.size())
+    if (p >= in.size() || in[p] < '0' || in[p] > '9')
         return false;
-    if (in[p] == '"') {
-        std::size_t q = in.find('"', p + 1);
-        if (q == std::string::npos)
-            return false;
-        std::string tok = in.substr(p + 1, q - p - 1);
-        if (tok.empty() || tok[0] == '-' || tok[0] == '+')
-            return false;
-        try {
-            std::size_t pos = 0;
-            unsigned long long v = std::stoull(tok, &pos);
-            if (pos != tok.size())
-                return false;
-            out = static_cast<std::uint64_t>(v);
-            return true;
-        } catch (...) {
-            return false;
-        }
-    }
+    std::size_t q = p;
+    while (q < in.size() && in[q] >= '0' && in[q] <= '9')
+        ++q;
+    if (q < in.size() && (in[q] == '.' || in[q] == 'e' || in[q] == 'E'))
+        return false;
     try {
         std::size_t pos = 0;
-        long long v = std::stoll(in.substr(p), &pos);
-        if (pos == 0 || v < 0)
+        unsigned long long v = std::stoull(in.substr(p, q - p), &pos);
+        if (pos != q - p)
             return false;
         out = static_cast<std::uint64_t>(v);
         return true;
@@ -220,10 +208,10 @@ public:
         }
         if (find_top(input, "release") != std::string::npos) {
             std::uint64_t h = 0;
-            if (!get_release(input, h))
-                throw mx::BusinessError("invalid-message", "bad release");
-            ctx.release_resource(h);
-            return "{\"released\":\"" + std::to_string(h) + "\",\"via\":" + quote(g_id) + "}";
+            if (get_release(input, h)) {
+                ctx.release_resource(h);
+                return "{\"released\":\"" + std::to_string(h) + "\",\"via\":" + quote(g_id) + "}";
+            }
         }
         if (find_top(input, "stream_send") != std::string::npos) {
             std::string spec = sub_object(input, "stream_send");

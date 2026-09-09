@@ -82,9 +82,11 @@ class Node extends Handler {
       const h = await ctx.acquireResource(String(acq.kind || ""), String(acq.label || ""), ms);
       return { acquired: { handle: h.toString() }, via: this.id };
     }
-    if (input.release !== undefined) {
-      await ctx.releaseResource(input.release);
-      return { released: String(input.release), via: this.id };
+    const rel = input.release;
+    if ((typeof rel === "number" && Number.isInteger(rel) && rel >= 0) ||
+        (typeof rel === "bigint" && rel >= 0n)) {
+      await ctx.releaseResource(rel);
+      return { released: String(rel), via: this.id };
     }
     if (input.stream_send && typeof input.stream_send === "object") {
       const spec = input.stream_send;

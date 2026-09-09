@@ -10,7 +10,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -141,21 +143,30 @@ func (n *node) OnCall(ctx *mx.CallCtx, ticket, cap string, input any, callCtx co
 	}
 	if rel, ok := in["release"]; ok && rel != nil {
 		var h uint64
-		if v, ok := num(rel); ok {
-			h = uint64(v)
-		} else if s, ok := rel.(string); ok {
-			var parsed uint64
-			if _, err := fmt.Sscan(s, &parsed); err != nil {
-				return bad("invalid-message", "bad release")
+		var isNum bool
+		switch v := rel.(type) {
+		case float64:
+			if v == math.Trunc(v) && v >= 0 && v < 18446744073709551616.0 {
+				h = uint64(v)
+				isNum = true
 			}
-			h = parsed
-		} else {
-			return bad("invalid-message", "bad release")
+		case json.Number:
+			if u, err := strconv.ParseUint(string(v), 10, 64); err == nil {
+				h = u
+				isNum = true
+			}
+		case int:
+			if v >= 0 {
+				h = uint64(v)
+				isNum = true
+			}
 		}
-		if rerr := ctx.ReleaseResource(h); rerr != nil {
-			return nil, rerr
+		if isNum {
+			if rerr := ctx.ReleaseResource(h); rerr != nil {
+				return nil, rerr
+			}
+			return map[string]any{"released": fmt.Sprint(h), "via": n.id}, nil
 		}
-		return map[string]any{"released": fmt.Sprint(h), "via": n.id}, nil
 	}
 	if spec, ok := in["stream_send"].(map[string]any); ok {
 		streamID, _ := spec["stream_id"].(string)

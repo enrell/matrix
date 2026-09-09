@@ -239,44 +239,34 @@ static mx_result_t on_call(mx_call_ctx_t *ctx, const char *ticket,
         return r;
     }
     const mxj_t *rel = mxj_field(in, "release");
-    if (rel) {
-        unsigned long long h = 0;
+    if (rel && rel->type == MXJ_NUM && rel->str) {
         int ok = 0;
-        if (rel->type == MXJ_NUM && rel->str) {
-            h = strtoull(rel->str, NULL, 10);
-            ok = 1;
-        } else if (rel->type == MXJ_STR && rel->str) {
-            char *end = NULL;
-            h = strtoull(rel->str, &end, 10);
-            ok = end && !*end;
-        }
-        if (!ok) {
+        unsigned long long h = mxj_parse_u64(rel->str, &ok);
+        if (ok) {
+            char *code = NULL, *msg = NULL;
+            mx_status_t st =
+                mx_release_resource(ctx, h, &code, &msg);
+            char *q_id = mxj_quote(G.id, strlen(G.id));
+            mx_result_t r;
+            r.output_json = NULL;
+            r.err_code = NULL;
+            r.err_msg = NULL;
+            if (st == MX_OK && q_id) {
+                char eb[160];
+                snprintf(eb, sizeof(eb), "{\"released\":\"%llu\",\"via\":%s}",
+                         h, q_id);
+                r.output_json = strdup(eb);
+            } else {
+                r.err_code = code ? code : strdup("internal");
+                r.err_msg = msg ? msg : strdup("release failed");
+                code = msg = NULL;
+            }
+            free(code);
+            free(msg);
+            free(q_id);
             mxj_free(in);
-            return business("invalid-message", "bad release");
+            return r;
         }
-        char *code = NULL, *msg = NULL;
-        mx_status_t st =
-            mx_release_resource(ctx, h, &code, &msg);
-        char *q_id = mxj_quote(G.id, strlen(G.id));
-        mx_result_t r;
-        r.output_json = NULL;
-        r.err_code = NULL;
-        r.err_msg = NULL;
-        if (st == MX_OK && q_id) {
-            char eb[160];
-            snprintf(eb, sizeof(eb), "{\"released\":\"%llu\",\"via\":%s}",
-                     h, q_id);
-            r.output_json = strdup(eb);
-        } else {
-            r.err_code = code ? code : strdup("internal");
-            r.err_msg = msg ? msg : strdup("release failed");
-            code = msg = NULL;
-        }
-        free(code);
-        free(msg);
-        free(q_id);
-        mxj_free(in);
-        return r;
     }
     const mxj_t *spec = mxj_field(in, "stream_send");
     if (spec && spec->type == MXJ_OBJ) {

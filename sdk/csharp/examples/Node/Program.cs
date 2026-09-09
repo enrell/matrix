@@ -127,21 +127,12 @@ sealed class Node : Handler
         }
         if (input.TryGetProperty("release", out var relEl))
         {
-            ulong h;
-            if (relEl.ValueKind == JsonValueKind.Number)
+            if (relEl.ValueKind == JsonValueKind.Number &&
+                relEl.TryGetUInt64(out ulong h))
             {
-                if (!relEl.TryGetUInt64(out h))
-                    throw new ComponentError("invalid-message", "bad release");
+                await ctx.ReleaseResourceAsync(h, cancel).ConfigureAwait(false);
+                return new Dictionary<string, object?> { ["released"] = h.ToString(), ["via"] = _id };
             }
-            else if (relEl.ValueKind == JsonValueKind.String)
-            {
-                if (!ulong.TryParse(relEl.GetString(), out h))
-                    throw new ComponentError("invalid-message", "bad release");
-            }
-            else
-                throw new ComponentError("invalid-message", "bad release");
-            await ctx.ReleaseResourceAsync(h, cancel).ConfigureAwait(false);
-            return new Dictionary<string, object?> { ["released"] = h.ToString(), ["via"] = _id };
         }
         if (input.TryGetProperty("stream_send", out var spec) && spec.ValueKind == JsonValueKind.Object)
         {
