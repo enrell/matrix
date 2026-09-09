@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # fuzz live: replay seeded generator cases against staged matrix-managed.
-# Triage notes: bare release + raw_bytes JSON echo per otherwise-branch
-# (expect ok+echo); binary refusal is frame-level (matrix-conform vectors).
+# Oracle per docs/ML1-NODE.md: numeric release denies (permission-denied /
+# invalid-message / already-released, never echo; string "0" would echo so the
+# generator sends ints only); raw_bytes JSON echoes per otherwise-branch, so
+# text-only refusal is frame-level (matrix-conform vectors) and the generator
+# emits echo instead; amplify 1048577+timeout_ms 15000 is NOT honored (manifest
+# budget governs) -> stable deny/deadline-exceeded slow-path, asserted as such.
 # Probe conventions mirror scripts/harness-ml1.sh lines 10-13 (see run.sh):
 # - success: out=$(req '...' 2>/dev/null) || fail, then grep stdout.
 # - denial: if out=$(req '...' 2>&1); then fail; else grep pattern.
