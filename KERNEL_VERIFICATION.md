@@ -135,6 +135,15 @@ withdraw-vs-admit race (revalidate-after-register, `calls.rs:6-8`); renew-vs-exp
   | R4 | FIXED+REGTEST | DEFEITO (`M5.1-AUDIT.md:92-104`) → B3; `m1_5.rs:t5_acquire_withdraw_never_publishes_dead_instance` |
   | R5 | LIMIT-documented | LIMITE DOCUMENTADO (`M5.1-AUDIT.md:106-113`, class F5 `:123`, backlog `:197-198`) → B5 (`MANAGED-RUNTIME.md` + CLI help); no regtest |
   Note: R3 is labeled CONTRATO in the audit; `call_reap` (t6) is the B4 dead-owner mechanism, not a change to R3's Expired-needs-close rule.
+- Exact denial codes (read from code paths 2026-09-09; assert these, never harness greps):
+  | Case | Exact code | Source |
+  |---|---|---|
+  | (a) status on released lease | `stale-generation` | `service.rs:247` (by-token missing) + `:230` via `validate` (`lease_status:263`); token removed by `release:561` |
+  | (b) invoke with ungranted cap | `permission-denied` | `service.rs:394` (grants) + `:403` (definitions) agree; stable wire `error.rs:11` (kernel-direct unknown cap `no-such-capability` `kernel.rs:1261` is a different layer — service short-circuits) |
+  | (c) invoke with stale generation/fence | `stale-generation` | `service.rs:235` (fence/deadline) + `:230` (missing) via `validate`; post-check `:416`; kernel `commit_effect` `:1610/:1614/:1617/:1627`; stable wire `error.rs:14` |
+  | (d) op-id replay divergent payload | `operation-id-conflict` | `store.rs:182` (`admit`) + `:283` (`commit_effect` fenced path) agree; absent from `error.rs` stable set → wire `internal` via `kernel_code_to_wire:47` |
+  | (e) call on non-Active context | `context-not-active` | `kernel.rs:1312` (`require_active` NotActive) + `:1299` (plugin not Active) + `:1253` (unpublished-cap terminal states); stable wire `error.rs:15` (provider-side post-admission split `:3451-3454` is a different layer, not this case) |
+  | (f) lease renew after expiry | `stale-generation` | `service.rs:277` (`renew` → `validate`): deadline branch `:235`, swept-missing branch `:230`; `renew_seq` same via `:324` |
 
 ## 7. Reference model design
 
