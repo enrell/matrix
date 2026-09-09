@@ -124,6 +124,7 @@ GIVEN ~19 daemons + active probes WHEN SIGHUP reload THEN observable revoke or e
 - Rust-component SDK has no standalone operator client (facade `matrix-runtime` is the reference path).
 - `matrix-sdk`/`matrix-rt` legacy envelope confusion: frozen compat only (`make compat`), never the authority path.
 - Missing coverage: caller-crash teardown (C19), teardown-concurrent reload (C28), property/fuzz harness (C27).
+- `host.sock` unlink gap (file-only, live socket still fails): SIGTERM `shutdown` never unlinks (`crates/matrix-host/src/lib.rs:516-535`); unlink lives only in `Drop for Inner` (`crates/matrix-host/src/lib.rs:2757-2767`), missed on daemon kill path; `ShutdownReport` covers sessions/leases/pending/routes only, no sock files (`crates/matrix-runtime/src/api.rs:897-924`); harness keeps `ss -xa` live-socket as hard FAIL and dead file as litter (`stale-sock-removed` + `rm`) (`tests/conformance/harness/run.sh:70-73`).
 
 ## 5. Interop N×N
 
