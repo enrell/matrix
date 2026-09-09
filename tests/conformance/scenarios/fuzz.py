@@ -5,7 +5,8 @@ raw_bytes JSON echoes per otherwise-branch (text-only refusal is frame-level,
 matrix-conform vectors cover it: this generator emits echo, never invalid-message);
 amplify caps min(N,1MiB): 1048577 input.timeout_ms=15000 NOT honored (manifest
 execution.timeout_ms governs); probed stable terminal at 5s+15s budgets is
-deny/deadline-exceeded (slow-path, node survives), asserted as such."""
+deny/deadline-exceeded (slow-path, node survives), asserted as such.
+Fixed release-string-echoes case pins Rust as_u64 parity (non-numeric release echoes)."""
 import argparse
 import json
 import random
@@ -85,6 +86,7 @@ def main():
     a = ap.parse_args()
     rng = random.Random(a.seed)
     cases = [make_case(rng, a.seed, i) for i in range(a.count)]
+    cases.append({"name": "release-string-echoes", "operation": "op-%d-fixed-relstr" % a.seed, "cap": CAP, "input": {"release": "0"}, "expect": "ok", "match": '"echo"', "absent": "released"})
     json.dump(cases, sys.stdout, indent=2)
     sys.stdout.write("\n")
 

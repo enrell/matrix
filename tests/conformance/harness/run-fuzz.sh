@@ -54,17 +54,18 @@ for i in $(seq 0 $((N-1))); do
   meta=$(python3 - "$H/work/cases.json" "$i" "$LTOK" "$LFENCE" <<'PY'
 import json, sys
 _, path, idx, tok, fence = sys.argv; c = json.load(open(path))[int(idx)]
-print(json.dumps({"req": {"action": "invoke", "lease": tok, "fence": fence, "operation": c["operation"], "cap": c["cap"], "input": c["input"]}, "name": c["name"], "expect": c["expect"], "match": c["match"], "case": c}))
+print(json.dumps({"req": {"action": "invoke", "lease": tok, "fence": fence, "operation": c["operation"], "cap": c["cap"], "input": c["input"]}, "name": c["name"], "expect": c["expect"], "match": c["match"], "absent": c.get("absent", ""), "case": c}))
 PY
 )
-  line=$(echo "$meta" | python3 -c "import json,sys; m=json.load(sys.stdin); print(m['name']+'\t'+m['expect']+'\t'+m['match'])")
-  IFS=$'\t' read -r name expect match <<< "$line"
+  line=$(echo "$meta" | python3 -c "import json,sys; m=json.load(sys.stdin); print(m['name']+'\t'+m['expect']+'\t'+m['match']+'\t'+m.get('absent',''))")
+  IFS=$'\t' read -r name expect match absent <<< "$line"
   echo "$meta" | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin)['req']))" > "$H/work/req.json"
   out=$(req "$(cat "$H/work/req.json")" 2>&1) || true
   if [ -z "$out" ]; then fail "fuzz-$name empty-reply"; continue; fi
   okline=0; echo "$out" | grep -q '"ok":[ ]*true' && okline=1 || true
   matchline=0; echo "$out" | grep -qiE "$match" && matchline=1 || true
   pass=0; case "$expect" in ok) [ "$okline" = 1 ] && [ "$matchline" = 1 ] && pass=1 || true;; deny) [ "$okline" = 0 ] && [ "$matchline" = 1 ] && pass=1 || true;; *) [ "$matchline" = 1 ] && pass=1 || true;; esac
+  if [ -n "$absent" ] && echo "$out" | grep -qiE "$absent"; then pass=0; fi
   if [ "$pass" = 1 ]; then ok "fuzz-$name"; else fail "fuzz-$name ${out:0:300}"; [ "$SHRUNK" = 0 ] && { SHRUNK=1; echo "shrink seed=0 idx=$i name=$name"; echo "$meta" | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin)['case']))"; } || true; fi
 done
 if out=$(req "{\"action\":\"release\",\"lease\":\"$LTOK\",\"fence\":\"$LFENCE\"}" 2>/dev/null) && echo "$out" | grep -q '"state":[ ]*"Disposed"'; then ok fuzz-release; else fail fuzz-release; fi
