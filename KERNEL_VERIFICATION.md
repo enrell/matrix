@@ -126,6 +126,15 @@ withdraw-vs-admit race (revalidate-after-register, `calls.rs:6-8`); renew-vs-exp
   (`stale-sock-removed` + `rm`); broad `grep -qiE 'stale|denied|not-active|unknown|expired'` acceptance
   (`run-nxn.sh:81`, `harness-ml1.sh:277`) proves denial happened, not the right denial — verification tests
   must assert exact code + journal event.
+- M5.1 R-classification (source of truth: `docs/M5.1-AUDIT.md:59-113` repros, `:115-125` classes, `:180-190` regtests; M5.1 closed `:203-205`):
+  | R | Status | Evidence |
+  |---|---|---|
+  | R1 | FIXED+REGTEST | DEFEITO (`M5.1-AUDIT.md:59-71`) → B1; `crates/matrix-core/tests/m1_5.rs:t1_concurrent_dispose_single_transition` |
+  | R2 | FIXED+REGTEST | DEFEITO (`M5.1-AUDIT.md:73-84`) → B2; `m1_5.rs:t2_ephemeral_invoke_settles_after_withdraw` (+ `t3_cleanup_cause_cites_only_live_tickets`) |
+  | R3 | CONTRACT (+`call_reap` mechanism) | CONTRATO (`M5.1-AUDIT.md:86-90`) → B4; `m1_5.rs:t4_dead_worker_opener_still_closes` (contract, passed pre-fix) + `t6_owner_reaps_revoked_ticket_of_dead_owner` (`call.reaped`) |
+  | R4 | FIXED+REGTEST | DEFEITO (`M5.1-AUDIT.md:92-104`) → B3; `m1_5.rs:t5_acquire_withdraw_never_publishes_dead_instance` |
+  | R5 | LIMIT-documented | LIMITE DOCUMENTADO (`M5.1-AUDIT.md:106-113`, class F5 `:123`, backlog `:197-198`) → B5 (`MANAGED-RUNTIME.md` + CLI help); no regtest |
+  Note: R3 is labeled CONTRATO in the audit; `call_reap` (t6) is the B4 dead-owner mechanism, not a change to R3's Expired-needs-close rule.
 
 ## 7. Reference model design
 
@@ -147,7 +156,7 @@ withdraw-vs-admit race (revalidate-after-register, `calls.rs:6-8`); renew-vs-exp
 - `wait_ready` polling (200×0.1s, cf. `tests/conformance/harness/run.sh:50-53`) gates readiness, never success.
 - One optional read-only hook: `MATRIX_TEST_SNAPSHOT` — justified solely to let an external oracle capture
   `inspect` dumps on failure without touching kernel state (page-level copy, no epoch advance, no state flips,
-  cf. `api.rs:837-840`); forbidden in the passing path.
+  cf. `api.rs:837-840`); forbidden in the passing path. It is test-only, out-of-contract, never a stable surface (compiled out / env-gated, forbidden in the passing path).
 
 ## 9. Fault injector + concurrency strategy
 
