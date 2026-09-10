@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	mx "matrix-component-go"
+	mx "github.com/enrell/matrix/sdk/go"
 )
 
 type node struct {

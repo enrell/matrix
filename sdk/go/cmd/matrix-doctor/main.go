@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	mx "matrix-component-go"
+	mx "github.com/enrell/matrix/sdk/go"
 )
 
 func main() {

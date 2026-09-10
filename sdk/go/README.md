@@ -16,8 +16,8 @@ No dependencies beyond the standard library. Go >= 1.24 (tested on
 
 ```sh
 # inside your module (offline: copy the SDK dir, add a replace line)
-require matrix-component-go v0.1.0
-replace matrix-component-go => /path/to/staged/sdk/go
+require github.com/enrell/matrix/sdk/go v0.1.0
+replace github.com/enrell/matrix/sdk/go => /path/to/staged/sdk/go
 ```
 
 `GOPROXY=off` builds work: nothing is fetched.
@@ -25,7 +25,7 @@ replace matrix-component-go => /path/to/staged/sdk/go
 ## Component side
 
 ```go
-import mx "matrix-component-go"
+import mx "github.com/enrell/matrix/sdk/go"
 
 type Echo struct{ mx.BaseHandler }
 

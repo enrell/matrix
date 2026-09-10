@@ -1,3 +1,3 @@
-module matrix-component-go
+module github.com/enrell/matrix/sdk/go
 
 go 1.24

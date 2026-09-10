@@ -1,0 +1,24 @@
+# Hex publish for matrix_component (no OIDC on Hex — API key required).
+# One-time setup: hex.pm dashboard → API keys → write-scoped key →
+# repo Settings → Secrets → HEX_API_KEY. Then tag to release:
+#   git tag sdk-elixir/v0.1.0 && git push origin sdk-elixir/v0.1.0
+name: publish-elixir
+on:
+  push:
+    tags: ["sdk-elixir/v*"]
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.20"
+          otp-version: "29"
+      - run: mix local.hex --force && mix local.rebar --force
+      - run: mix hex.build
+      - run: mix hex.publish --yes
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}

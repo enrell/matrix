@@ -27,7 +27,7 @@ fi
 rm -rf "$DIR"
 mkdir -p "$DIR/mx"
 cp "$ROOT/component.go" "$ROOT/operator.go" "$DIR/mx/"
-sed -e 's|"matrix-component-go"|"nodeapp/mx"|' "$ROOT/cmd/mx-node/main.go" > "$DIR/node.go"
+sed -e 's|"github.com/enrell/matrix/sdk/go"|"nodeapp/mx"|' "$ROOT/cmd/mx-node/main.go" > "$DIR/node.go"
 printf 'module nodeapp\n\ngo 1.24\n' > "$DIR/go.mod"
 sed -e "s|<NAME>|$NAME|g" "$ROOT/templates/README.md" > "$DIR/README.md"
 sed -e "s|@NODE@|$DIR/mx-node|g; s|@PKI@|$PKI|g; s|@HOME@|$HOME_DIR|g; s|@FINGERPRINT@|$FP|g" \

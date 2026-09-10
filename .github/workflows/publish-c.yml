@@ -1,0 +1,25 @@
+# C/C++ distribution: no registry — attach the source tarball (with
+# LICENSE-*) to a GitHub Release. Tag to release:
+#   git tag sdk-c/v0.1.0 && git push origin sdk-c/v0.1.0
+name: publish-c
+on:
+  push:
+    tags: ["sdk-c/v*"]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: |
+          cmake -S sdk/c -B build -DMATRIX_ENABLE_CPP=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+      - name: Pack with licenses
+        run: tar czf matrix-c-0.1.0.tar.gz sdk/c LICENSE-MIT LICENSE-APACHE-2.0
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" matrix-c-0.1.0.tar.gz --title "${{ github.ref_name }}" --notes "C/C++ SDK source distribution (dual-licensed MIT OR Apache-2.0)."
