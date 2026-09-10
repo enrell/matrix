@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "matrix-component"
+name = "matrix-kernel"
 version = "0.1.0"
 description = "Matrix external-component SDK (M8 experimental contract surface)"
 readme = "README.md"

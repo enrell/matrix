@@ -25,9 +25,9 @@ Install from the shipped wheel without any `PYTHONPATH` pointing at a checkout:
 
 ```sh
 # option A: unzip next to your project and import from the file path
-unzip dist/py/matrix_component-*.whl -d third_party/matrix
+unzip dist/py/matrix_kernel-*.whl -d third_party/matrix
 # option B: point sys.path at the wheel itself (zipimport)
-python3 -c "import sys; sys.path.insert(0, 'third_party/matrix_component-0.1.0-py3-none-any.whl'); import matrix_component"
+python3 -c "import sys; sys.path.insert(0, 'third_party/matrix_kernel-0.1.0-py3-none-any.whl'); import matrix_component"
 ```
 
 Contract reference is `docs/SDK.md`; parity with the Rust crate is
@@ -39,8 +39,8 @@ Same offline rules per ecosystem (see `docs/ML1-MATRIX.md` for versions
 and `templates/README.md` inside each generated project for the recipe):
 
 ```sh
-python3 -m venv .venv && .venv/bin/pip install --no-index dist/ml1/matrix_component-*.whl
-npm install --offline --no-audit --no-fund dist/ml1/matrix-component-*.tgz
+python3 -m venv .venv && .venv/bin/pip install --no-index dist/ml1/matrix_kernel-*.whl
+npm install --offline --no-audit --no-fund dist/ml1/matrix-kernel-*.tgz
 # Go: copy dist/ml1/go, add `replace matrix-component-go => ./go`, GOPROXY=off
 # Crystal: copy dist/ml1/crystal (zero shard deps, `shards build` offline)
 # Elixir: `{:matrix_component, path: "dist/ml1/elixir"}` (no Hex deps, OTP >= 27)

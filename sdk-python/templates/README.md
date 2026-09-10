@@ -16,7 +16,7 @@ product application.
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install --no-index /path/to/matrix_component-*.whl
+.venv/bin/pip install --no-index /path/to/matrix_kernel-*.whl
 ```
 
 `node.py` imports `matrix_component` (installed) for the wire

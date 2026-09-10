@@ -48,7 +48,7 @@ trap cleanup EXIT
 # ---------- stage artifacts out of the checkout ----------
 [ -f "$ML1/matrix-go-0.1.0.tar.gz" ] || { echo "no ml1 packs in dist; run scripts/package.sh"; exit 2; }
 for t in python go crystal elixir csharp c; do tar xzf "$ML1/matrix-$t-0.1.0.tar.gz" -C "$H/pkg"; done
-mkdir -p "$H/pkg/js-src" && tar xzf "$ML1"/matrix-component-*.tgz -C "$H/pkg/js-src"
+mkdir -p "$H/pkg/js-src" && tar xzf "$ML1"/matrix-kernel-*.tgz -C "$H/pkg/js-src"
 mkdir -p "$H/bin"
 cp "$DIST"/bin/* "$H/bin/"
 cp "$ROOT/scripts/dev-pki.py" "$H/work/"
@@ -58,12 +58,12 @@ export MX_MATRIX_MANAGED="$MB" MX_DEV_PKI="$H/work/dev-pki.py" MX_DOCTOR_BIN="$M
 
 # ---------- L01: isolated installs from packs ----------
 python3 -m venv "$H/venv"
-"$H/venv/bin/pip" install --no-index --quiet "$ML1"/matrix_component-*.whl
+"$H/venv/bin/pip" install --no-index --quiet "$ML1"/matrix_kernel-*.whl
 if env -u PYTHONPATH -u PYTHONHOME "$H/venv/bin/python" -c "import matrix_component, matrix_operator; print('py-ok')" 2>&1 | grep -q py-ok; then ok L01 py-venv-isolated; else fail L01 py-venv-isolated; fi
 if (cd /tmp && env -u PYTHONPATH -u PYTHONHOME python3 -c "import matrix_component" 2>/dev/null); then fail L01 py-no-system-leak; else ok L01 py-no-system-leak; fi
 VPY="$H/venv/bin/python"
-mkdir -p "$H/proj/js-install" && (cd "$H/proj/js-install" && npm init -y >/dev/null 2>&1 && npm install --offline --no-audit --no-fund "$ML1"/matrix-component-*.tgz >/dev/null 2>&1)
-if node -e "require('$H/proj/js-install/node_modules/matrix-component')" 2>/dev/null; then ok L01 js-npm-offline; else fail L01 js-npm-offline; fi
+mkdir -p "$H/proj/js-install" && (cd "$H/proj/js-install" && npm init -y >/dev/null 2>&1 && npm install --offline --no-audit --no-fund "$ML1"/matrix-kernel-*.tgz >/dev/null 2>&1)
+if node -e "require('$H/proj/js-install/node_modules/matrix-kernel')" 2>/dev/null; then ok L01 js-npm-offline; else fail L01 js-npm-offline; fi
 if (cd "$H/pkg/go" && go build ./... >/dev/null 2>&1 && go vet ./... 2>&1 | head -2); then ok L01 go-build-vet; else fail L01 go-build-vet; fi
 if (cd "$H/pkg/go" && go test -count=1 -timeout 240s . > "$H/work/go-test.log" 2>&1); then ok L01 go-tests; else fail L01 go-tests "$(tail -2 "$H/work/go-test.log")"; fi
 if (cd "$H/pkg/crystal" && crystal spec > "$H/work/cr-spec.log" 2>&1); then ok L01 crystal-spec; else fail L01 crystal-spec "$(tail -2 "$H/work/cr-spec.log")"; fi
@@ -96,7 +96,7 @@ doctor_ok() { # $1=L12-id $2...=command; asserts doctor shape ok
   if "$@" > "$H/work/doctor-$id.json" 2>&1 && doctor_shape_ok "$H/work/doctor-$id.json"; then ok L12 doctor-$id; else fail L12 doctor-$id "$(head -c 200 "$H/work/doctor-$id.json")"; fi
 }
 doctor_ok py "$VPY" "$H/pkg/python/matrix_operator.py" --binary "$MB"
-doctor_ok js node "$H/proj/js-install/node_modules/matrix-component/bin/matrix-doctor.js" --binary "$MB"
+doctor_ok js node "$H/proj/js-install/node_modules/matrix-kernel/bin/matrix-doctor.js" --binary "$MB"
 (cd "$H/pkg/go" && go build -o "$H/bin/mx-doctor-go" ./cmd/matrix-doctor)
 doctor_ok go "$H/bin/mx-doctor-go" --binary "$MB"
 (cd "$H/pkg/crystal" && crystal build --release examples/doctor.cr -o "$H/bin/matrix-doctor-cr" 2>/dev/null)

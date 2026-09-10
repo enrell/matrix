@@ -33,9 +33,9 @@ cp "$ROOT"/sdk-python/matrix_component.py "$ROOT"/sdk-python/matrix_operator.py 
   "$ROOT"/sdk-python/LICENSE-MIT "$ROOT"/sdk-python/LICENSE-APACHE-2.0 "$ML1/python/"
 # JS: npm pack (offline, no registry).
 if command -v npm >/dev/null 2>&1; then
-  (cd "$ROOT/sdk/js" && rm -f matrix-component-*.tgz && npm pack --silent >/dev/null 2>&1) || true
-  cp "$ROOT"/sdk/js/matrix-component-*.tgz "$ML1/" 2>/dev/null || true
-  rm -f "$ROOT"/sdk/js/matrix-component-*.tgz
+  (cd "$ROOT/sdk/js" && rm -f matrix-kernel-*.tgz && npm pack --silent >/dev/null 2>&1) || true
+  cp "$ROOT"/sdk/js/matrix-kernel-*.tgz "$ML1/" 2>/dev/null || true
+  rm -f "$ROOT"/sdk/js/matrix-kernel-*.tgz
 fi
 # Go / Crystal / Elixir / C# / C: staged source trees (hermetic builds).
 for s in go crystal elixir csharp c; do
@@ -96,7 +96,7 @@ os.chdir('$ROOT/sdk-python')
 print(b.build_wheel('$PY'))
 " > /dev/null
 rm -rf "$ROOT/sdk-python/build" "$ROOT/sdk-python/"*.egg-info
-cp "$PY"/matrix_component-*.whl "$ML1/" 2>/dev/null || true
+cp "$PY"/matrix_kernel-*.whl "$ML1/" 2>/dev/null || true
 
 echo "-- schemas and vectors"
 "$BIN/matrix-conform" --dump-vectors > "$SCHEMAS/vectors.json"
@@ -105,7 +105,7 @@ echo "-- fixtures (generic test components, no product app)"
 mkdir -p "$DIST/fixtures"
 cp "$ROOT/sdk-python/dep_node.py" "$DIST/fixtures/"
 cp "$ROOT/sdk-python/matrix_component.py" "$DIST/fixtures/"
-cp "$PY"/matrix_component-*.whl "$DIST/fixtures/" 2>/dev/null || true
+cp "$PY"/matrix_kernel-*.whl "$DIST/fixtures/" 2>/dev/null || true
 
 echo "-- extracted crate sources (complete artifacts for path use)"
 for c in matrix-component matrix-core matrix-guard matrix-host matrix-proto matrix-runtime; do

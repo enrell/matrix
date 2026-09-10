@@ -9,8 +9,8 @@ not claimed. Wire behavior is `matrix.component/0.1` everywhere
 
 | Language | Package / sources | Version | Install (offline, isolated) |
 |---|---|---|---|
-| Python | `matrix-component` wheel (`sdk-python/`) + `matrix_operator` module | 0.1.0 | `pip install --no-index <wheel>` in a venv |
-| JS/TS | `matrix-component` tarball (`sdk/js/`, `npm pack`) + `index.d.ts` | 0.1.0 | `npm install --offline <tgz>`; plain JS needs no compiler |
+| Python | `matrix-kernel` wheel (`sdk-python/`) + `matrix_operator` module | 0.1.0 | `pip install --no-index <wheel>` in a venv |
+| JS/TS | `matrix-kernel` tarball (`sdk/js/`, `npm pack`) + `index.d.ts` | 0.1.0 | `npm install --offline <tgz>`; plain JS needs no compiler |
 | Go | module `matrix-component-go` (`sdk/go/`) | 0.1.0 | `replace` to staged dir, `GOPROXY=off` |
 | Crystal | shard `matrix-component` (`sdk/crystal/`) | 0.1.0 | copy dir (or scaffold vendors); `shards build` needs no network |
 | Elixir | Mix package `:matrix_component` (`sdk/elixir/`) | 0.1.0 | `path:` dep; `mix test` / `mix escript.build` offline |

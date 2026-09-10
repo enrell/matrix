@@ -8,7 +8,7 @@ refusal and a migration note. No `1.0` is declared by this epic.
 |---|---|---|
 | Rust crates (`matrix-*`) | `0.1.0`, `publish = false` | Independent per crate; relation published here when they diverge |
 | Facade contract (`api::API_VERSION`) | `0.1.0-experimental` | Bumps on any supported-surface break |
-| Python `matrix-component` | `0.1.0` | Follows the component protocol, not crate numbers |
+| Python `matrix-kernel` | `0.1.0` | Follows the component protocol, not crate numbers |
 | ML1 SDKs (JS/TS, Go, Crystal, Elixir, C#, C, C++) | `0.1.0` each | Follow the component protocol + ML1 node contract, not crate numbers |
 | Component protocol (`matrix.component`) | `0.1` | Negotiated `features`; unknown types fail closed |
 | Remote profile (`matrix.remote`) | `0.1` | ALPN + `features`; missing capability refuses explicitly |

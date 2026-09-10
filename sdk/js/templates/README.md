@@ -17,10 +17,10 @@ supported entries over this same SDK).
 ## 1. Install the SDK (isolated, offline)
 
 ```sh
-npm install --offline --no-audit --no-fund /path/to/matrix-component-*.tgz
+npm install --offline --no-audit --no-fund /path/to/matrix-kernel-*.tgz
 ```
 
-`node.js` requires `matrix-component`: wire protocol plus the
+`node.js` requires `matrix-kernel`: wire protocol plus the
 operator surface. Zero dependencies. Node >= 20.
 
 ## 2. Configure the operator (authority lives here, not in the node)
@@ -42,7 +42,7 @@ Matrix repo; never weaken mTLS for demos).
 Drive the same flow from JS (no CLI quoting):
 
 ```js
-const { start } = require("matrix-component");
+const { start } = require("matrix-kernel");
 const kernel = await start("/path/to/matrix-managed", configDict, operatorPki);
 const act = kernel.client.activate("prov", 30000);
 const v = kernel.client.invoke(act.lease, act.fence, "op-1",
