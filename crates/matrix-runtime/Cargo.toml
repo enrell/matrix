@@ -3,6 +3,11 @@ publish = false
 name = "matrix-runtime"
 version = "0.1.0"
 edition = "2021"
+description = "Matrix managed service: SQLite ledger, mutual TLS, leases, routes and public api facade"
+authors = ["enrell"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/enrell/matrix"
+readme = "README.md"
 [dependencies]
 matrix-proto = { path = "../matrix-proto" }
 matrix-core = { path = "../matrix-core" }

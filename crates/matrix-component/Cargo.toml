@@ -3,6 +3,11 @@ publish = false
 name = "matrix-component"
 version = "0.1.0"
 edition = "2021"
+description = "Matrix Rust component SDK for matrix.component/0.1"
+authors = ["enrell"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/enrell/matrix"
+readme = "README.md"
 
 [dependencies]
 matrix-proto = { path = "../matrix-proto" }
