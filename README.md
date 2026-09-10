@@ -2,38 +2,38 @@
 
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](LICENSE-MIT)
 
-Kernel em Rust para composição espaço-temporal de componentes, com plugins
-independentes de linguagem e execução local ou remota. Aplicações e
-componentes de negócio vivem em repositórios separados — aqui mora o núcleo:
-contexto, propriedade, dependências, autorização e ciclo de vida.
+A Rust kernel for spatiotemporal component composition, with
+language-independent plugins and local or remote execution. Applications
+and business components live in separate repositories — this one holds the
+core: context, ownership, dependencies, authorization and lifecycle.
 
-**Estado: runtime experimental (`0.1.0`).** Sem promessa de estabilidade `1.0`.
-O que cada superfície garante está em [docs/VERSIONS.md](docs/VERSIONS.md);
-limitações conhecidas em [docs/M8-COMPOSITION.md](docs/M8-COMPOSITION.md).
+**Status: experimental runtime (`0.1.0`).** No `1.0` stability promise.
+What each surface guarantees is in [docs/VERSIONS.md](docs/VERSIONS.md);
+known limitations in [docs/M8-COMPOSITION.md](docs/M8-COMPOSITION.md).
 
-## Instalação
+## Install
 
-SDKs em 9 linguagens, dual-licenciados MIT OR Apache-2.0. Publicação nos
-registries está em andamento; hoje, instale dos artefatos locais:
+SDKs in 9 languages, dual-licensed MIT OR Apache-2.0. Registry publication
+is in progress; for now, install from local artifacts:
 
 ```sh
 ./scripts/package.sh
 ```
 
-Depois siga o guia por ecossistema em [docs/INSTALL.md](docs/INSTALL.md)
-(venv + wheel offline, `npm install --offline` do tarball, `GOPROXY=off`,
-`shards`/`mix`/`dotnet`/`cmake` sem rede). Cada SDK tem um `scaffold.sh`
-que gera um projeto funcional a partir de template.
+Then follow the per-ecosystem guide in [docs/INSTALL.md](docs/INSTALL.md)
+(offline venv + wheel, `npm install --offline` from the tarball,
+`GOPROXY=off`, network-free `shards`/`mix`/`dotnet`/`cmake`). Each SDK ships
+a `scaffold.sh` that generates a working project from a template.
 
-## Uso em 5 minutos
+## Five minutes
 
 ```sh
 ./scripts/dev-pki.py /tmp/pki --server-name localhost
-# edite um config.json (exemplo em sdk-python/templates/config.json)
+# edit a config.json (example at sdk-python/templates/config.json)
 ./target/release/matrix-managed serve /tmp/config.json
 ```
 
-Ou via SDK Python:
+Or via the Python SDK:
 
 ```python
 from matrix_operator import start
@@ -44,32 +44,32 @@ v = kernel.client.invoke(act["lease"], act["fence"], "op-1",
 kernel.close()
 ```
 
-O demo fim-a-fim (`python3 scripts/demo-composition.py`) mostra chain
-Rust→Python com withdraw e reintrodução em ~1 minuto.
+The end-to-end demo (`python3 scripts/demo-composition.py`) shows a
+Rust→Python chain with withdraw and reintroduction in about a minute.
 
-## Documentação
+## Docs
 
-- [Mapa da documentação](docs/README.md) · [Estado real do código](docs/STATUS.md)
-- [Contrato e invariantes](docs/CONTRACT.md) · [Protocolo](docs/PROTOCOL.md)
-- [Perfil gerenciado (operação)](docs/MANAGED-RUNTIME.md) · [Plugins](PLUGIN.md)
-- [Conformidade dos SDKs](CONFORMANCE.md) · [Verificação do kernel](KERNEL_VERIFICATION.md)
+- [Documentation map](docs/README.md) · [Actual code status](docs/STATUS.md)
+- [Contract and invariants](docs/CONTRACT.md) · [Protocol](docs/PROTOCOL.md)
+- [Managed profile (operations)](docs/MANAGED-RUNTIME.md) · [Plugins](PLUGIN.md)
+- [SDK conformance](CONFORMANCE.md) · [Kernel verification](KERNEL_VERIFICATION.md)
 
 ## Layout
 
-| Crate | Papel |
+| Crate | Role |
 |---|---|
-| `matrix-core` | Contextos, recursos, dependências, tickets e lifecycle local |
-| `matrix-rt` | Daemon e CLI por socket Unix, perfil confiável (legado) |
-| `matrix-host` / `matrix-component` | Host e SDK de processos locais |
-| `matrix-guard` | Sandbox Linux e orçamento de supervisão |
-| `matrix-runtime` | Serviço gerenciado: SQLite, TLS mútuo, leases (`api` é a fachada pública) |
-| `matrix-sdk` | Cliente legado do daemon (compatibilidade congelada) |
+| `matrix-core` | Contexts, resources, dependencies, tickets and local lifecycle |
+| `matrix-rt` | Daemon and CLI over a Unix socket, trusted profile (legacy) |
+| `matrix-host` / `matrix-component` | Local process host and SDK |
+| `matrix-guard` | Linux sandbox and supervision budget |
+| `matrix-runtime` | Managed service: SQLite, mutual TLS, leases (`api` is the public facade) |
+| `matrix-sdk` | Legacy daemon client (frozen compatibility) |
 
-Validação canônica: `make test`. Compatibilidade: `make compat`.
+Canonical validation: `make test`. Compatibility: `make compat`.
 
-## Licença
+## License
 
-MIT OR Apache-2.0 — veja [LICENSE-MIT](LICENSE-MIT) e
-[LICENSE-APACHE-2.0](LICENSE-APACHE-2.0). Vale para todos os SDKs e crates;
-escolha a que preferir, sem copyleft: uso em projeto fechado é permitido,
-basta preservar os avisos.
+MIT OR Apache-2.0 — see [LICENSE-MIT](LICENSE-MIT) and
+[LICENSE-APACHE-2.0](LICENSE-APACHE-2.0). Applies to all SDKs and crates;
+pick whichever you prefer, no copyleft: closed-source use is allowed,
+just preserve the notices.
