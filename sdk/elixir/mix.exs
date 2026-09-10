@@ -17,7 +17,8 @@ defmodule MatrixComponent.MixProject do
       deps: [],
       escript: [main_module: Matrix.Node, name: "mx-node"],
       description: "Matrix external-component SDK for Elixir (ML1 experimental)",
-      package: [licenses: []]
+      package: [licenses: ["MIT", "Apache-2.0"], links: %{},
+                files: ~w(lib mix.exs README.md LICENSE-MIT LICENSE-APACHE-2.0)]
     ]
   end
 end

@@ -1,6 +1,6 @@
 # Install guide (M8, local artifacts only)
 
-There is no registry publication and no `1.0`: everything here installs
+No registry publication yet and no `1.0`: everything here installs
 from a `dist/` tree built by `scripts/package.sh` in the Matrix
 checkout (Rust 1.98+, Python 3.10+, Linux x86_64, OpenSSL CLI).
 `dist/MANIFEST.txt` records hashes, versions and provenance — verify
@@ -20,8 +20,8 @@ hidden checkout dependency (the harness asserts this from `/tmp`).
 
 ## Python SDK
 
-No PyPI upload (the repository ships no license file). Install from the
-shipped wheel without any `PYTHONPATH` pointing at a checkout:
+PyPI upload in progress (packages are dual-licensed MIT OR Apache-2.0).
+Install from the shipped wheel without any `PYTHONPATH` pointing at a checkout:
 
 ```sh
 # option A: unzip next to your project and import from the file path

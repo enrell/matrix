@@ -17,11 +17,10 @@ refusal and a migration note. No `1.0` is declared by this epic.
 | Manifest/config schema | Unversioned JSON, `deny_unknown_fields` | Unknown fields reject (detectable before operating) |
 | Store format (`user_version`) | `1` | Open refuses other versions; backups record it |
 
-No license file ships with this repository, so registry publication is
-disabled (`publish = false`, no PyPI upload): distribution is local
-artifacts with recorded hashes only (see `scripts/package.sh` and the
-M8 delivery record). Adding a license is a project decision, not an
-implementer patch.
+SDK packages are dual-licensed MIT OR Apache-2.0 (`LICENSE-MIT`,
+`LICENSE-APACHE-2.0`); kernel crates stay unpublished (`publish = false`)
+until a separate decision. Distribution today is local artifacts with
+recorded hashes (see `scripts/package.sh` and the M8 delivery record).
 
 Kernel updates (new activation semantics, ledger rules) and component
 updates (new manifest version → new generation, old handles invalid)

@@ -29,8 +29,8 @@ rm -rf "$ML1/python"
 mkdir -p "$ML1/python/templates"
 cp "$ROOT"/sdk-python/matrix_component.py "$ROOT"/sdk-python/matrix_operator.py \
   "$ROOT"/sdk-python/dep_node.py "$ROOT"/sdk-python/scaffold.sh \
-  "$ROOT"/sdk-python/README.md "$ROOT"/sdk-python/pyproject.toml "$ML1/python/"
-cp "$ROOT"/sdk-python/templates/* "$ML1/python/templates/"
+  "$ROOT"/sdk-python/README.md "$ROOT"/sdk-python/pyproject.toml \
+  "$ROOT"/sdk-python/LICENSE-MIT "$ROOT"/sdk-python/LICENSE-APACHE-2.0 "$ML1/python/"
 # JS: npm pack (offline, no registry).
 if command -v npm >/dev/null 2>&1; then
   (cd "$ROOT/sdk/js" && rm -f matrix-component-*.tgz && npm pack --silent >/dev/null 2>&1) || true
@@ -41,6 +41,7 @@ fi
 for s in go crystal elixir csharp c; do
   rm -rf "$ML1/$s"
   mkdir -p "$ML1/$s"
+  cp "$ROOT"/sdk/$s/LICENSE-MIT "$ROOT"/sdk/$s/LICENSE-APACHE-2.0 "$ML1/$s/"
   case "$s" in
     go) cp "$ROOT"/sdk/go/go.mod "$ROOT"/sdk/go/*.go "$ML1/go/"
         mkdir -p "$ML1/go/cmd/mx-node" "$ML1/go/cmd/matrix-doctor" "$ML1/go/templates"
@@ -125,7 +126,7 @@ cp "$ROOT"/docs/API-CATALOG.md "$ROOT"/docs/VERSIONS.md "$ROOT"/docs/INSTALL.md 
 
 echo "-- manifest"
 {
-  echo "# Matrix M8+ML1 local distribution (validation only, no license conveyed)"
+  echo "# Matrix M8+ML1 local distribution (dual-licensed MIT OR Apache-2.0, see LICENSE-*)"
   echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "git_rev: $(git -C "$ROOT" rev-parse HEAD)"
   echo "git_status_clean: $([ -z "$(git -C "$ROOT" status --short)" ] && echo yes || echo no)"

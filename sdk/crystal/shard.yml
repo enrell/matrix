@@ -4,7 +4,7 @@ description: >
   Matrix external-component SDK for Crystal (ML1 experimental contract
   surface). Speaks matrix.component/0.1: handshake, registration,
   activation, calls, dependencies, resources, events and streams.
-  Local validation artifact only — not for registry publication.
+license: MIT OR Apache-2.0
 
 authors:
   - Matrix kernel project <noreply@example.invalid>

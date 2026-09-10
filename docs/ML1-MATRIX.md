@@ -19,7 +19,8 @@ not claimed. Wire behavior is `matrix.component/0.1` everywhere
 | C++ | header `cpp/matrix.hpp` over the C library (same package) | 0.1.0 | include path + link C lib |
 | Rust | crates `matrix-component` (+ facade `matrix-runtime`) | 0.1.0 | reference (M8); parity target |
 
-No registry publication (no license ships with the repository):
+Licensed MIT OR Apache-2.0 (see `LICENSE-MIT`, `LICENSE-APACHE-2.0`);
+registry publication per ecosystem is in progress — until then,
 distribution is staged directories/tarballs with hashes
 (`scripts/package.sh`).
 

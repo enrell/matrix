@@ -2,10 +2,11 @@
   "name": "matrix-component",
   "version": "0.1.0",
   "description": "Matrix external-component SDK for Node.js (ML1 experimental contract surface)",
+  "license": "MIT OR Apache-2.0",
   "type": "commonjs",
   "main": "lib/index.js",
   "types": "index.d.ts",
-  "files": ["lib/", "bin/", "examples/", "templates/", "scaffold.sh", "index.d.ts", "README.md"],
+  "files": ["lib/", "bin/", "examples/", "templates/", "scaffold.sh", "index.d.ts", "README.md", "LICENSE-MIT", "LICENSE-APACHE-2.0"],
   "bin": {
     "matrix-scaffold": "bin/matrix-scaffold.js",
     "matrix-doctor": "bin/matrix-doctor.js"
@@ -14,6 +15,5 @@
     "test": "node --test test/"
   },
   "engines": {"node": ">=20"},
-  "dependencies": {},
-  "private": true
+  "dependencies": {}
 }
