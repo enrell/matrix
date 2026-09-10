@@ -21,7 +21,7 @@ jobs:
         working-directory: sdk/elixir
       - run: mix hex.build
         working-directory: sdk/elixir
-      - run: mix hex.publish --yes
+      - run: mix hex.publish package --yes
         working-directory: sdk/elixir
         env:
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
