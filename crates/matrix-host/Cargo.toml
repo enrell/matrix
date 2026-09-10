@@ -1,5 +1,4 @@
 [package]
-publish = false
 name = "matrix-host"
 version = "0.1.0"
 edition = "2021"
@@ -10,11 +9,11 @@ repository = "https://github.com/enrell/matrix"
 readme = "README.md"
 
 [dependencies]
-matrix-guard = { path = "../matrix-guard" }
-matrix-core = { path = "../matrix-core" }
-matrix-proto = { path = "../matrix-proto" }
+matrix-guard = { version = "0.1.0", path = "../matrix-guard" }
+matrix-core = { version = "0.1.0", path = "../matrix-core" }
+matrix-proto = { version = "0.1.0", path = "../matrix-proto" }
 serde_json = "1"
 sha2 = "0.10"
 
 [dev-dependencies]
-matrix-component = { path = "../matrix-component" }
+matrix-component = { version = "0.1.0", path = "../matrix-component" }
