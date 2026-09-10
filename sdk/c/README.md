@@ -4,8 +4,8 @@ Experimental Matrix SDKs for C and C++ (ML1 contract surface, version
 `0.1.0`). One package, two SDK entries: the C SDK (`mx_component.h`,
 C11 + POSIX) does the protocol work; the C++ SDK (`cpp/matrix.hpp`,
 C++17, header-only RAII) owns lifetimes over the same transport.
-Local validation artifact only — not for registry publication (the
-repository ships no license file).
+Dual-licensed MIT OR Apache-2.0 (see LICENSE-MIT, LICENSE-APACHE-2.0);
+registry publication in progress.
 
 Contract reference: `docs/SDK.md`, `docs/ML1-NODE.md`,
 `docs/ML1-MATRIX.md` in the Matrix repository. Same observable

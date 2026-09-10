@@ -1,8 +1,8 @@
 # matrix-component (Elixir SDK)
 
 Experimental Matrix SDK for Elixir (ML1 contract surface, version
-`0.1.0`). Local validation artifact only — not for Hex publication
-(the repository ships no license file).
+`0.1.0`). Dual-licensed MIT OR Apache-2.0 (see LICENSE-MIT,
+LICENSE-APACHE-2.0); Hex publication in progress.
 
 Contract reference: `docs/SDK.md`, `docs/ML1-NODE.md`,
 `docs/ML1-MATRIX.md` in the Matrix repository. Same observable
