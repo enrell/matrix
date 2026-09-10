@@ -51,8 +51,8 @@ step_js() {
 
 step_go() {
   confirm go || return 0
-  echo "go: no registry upload. Tag the release instead: git tag sdk-go/v0.1.0 && git push origin sdk-go/v0.1.0"
-  echo "BLOCKED until go.mod becomes a full import path (today: bare module matrix-component-go)."
+  echo "go: no registry upload. Tag the release: git tag sdk/go/v0.1.0 <commit> && git push origin sdk/go/v0.1.0"
+  echo "(module path is canonical: github.com/enrell/matrix/sdk/go; slash tag required, dash tags ignored by the proxy)"
 }
 
 step_crystal() {
