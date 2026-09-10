@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Matrix external-component SDK for Node.js (ML1 experimental contract surface)",
   "license": "MIT OR Apache-2.0",
+  "repository": {"type": "git", "url": "git+https://github.com/enrell/matrix.git", "directory": "sdk/js"},
   "type": "commonjs",
   "main": "lib/index.js",
   "types": "index.d.ts",

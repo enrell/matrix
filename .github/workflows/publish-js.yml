@@ -1,0 +1,27 @@
+# Trusted publishing (OIDC, no tokens) for matrix-component on npm.
+# BLOCKED on name: `matrix-component` is taken on npmjs.com. Either claim
+# the `enrell` org/user and rename to @enrell/matrix-component, or pick a
+# free name — then update sdk/js/package.json and this workflow.
+# One-time console setup: npmjs.com package Settings → Publishing Access →
+# require provenance; this workflow publishes with --provenance.
+# Tag to release: git tag sdk-js/v0.1.0 && git push origin sdk-js/v0.1.0
+name: publish-js
+on:
+  push:
+    tags: ["sdk-js/v*"]
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+      - run: npm test
+        working-directory: sdk/js
+      - run: npm publish --provenance --access public
+        working-directory: sdk/js

@@ -18,3 +18,8 @@ sdk/js/node_modules/
 sdk/elixir/_build/
 sdk/elixir/erl_crash.dump
 sdk/elixir/mx-node
+
+# Secrets and local publish artifacts (never committed)
+.env*
+sdk-python/dist/
+sdk/js/*.tgz

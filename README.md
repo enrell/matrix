@@ -1,57 +1,75 @@
 # Matrix
 
-Kernel em Rust para composição espaço-temporal de componentes, com plugins independentes de linguagem e execução local ou remota.
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](LICENSE-MIT)
 
-**Estado: runtime experimental.** M1 e M2.5 têm implementação local; M3–M5 estão disponíveis no perfil gerenciado `matrix-managed`, com isolamento Linux, ledger durável e hosts por TLS. Consulte as garantias e limitações do [perfil gerenciado](docs/MANAGED-RUNTIME.md).
+Kernel em Rust para composição espaço-temporal de componentes, com plugins
+independentes de linguagem e execução local ou remota. Aplicações e
+componentes de negócio vivem em repositórios separados — aqui mora o núcleo:
+contexto, propriedade, dependências, autorização e ciclo de vida.
 
-Matrix é somente o kernel genérico. Aplicações e componentes de negócio vivem em repositórios separados. O núcleo fornece contexto, propriedade, dependências, autorização e ciclo de vida para qualquer domínio que precise de composição espacial e temporal, dentro dos perfis suportados.
+**Estado: runtime experimental (`0.1.0`).** Sem promessa de estabilidade `1.0`.
+O que cada superfície garante está em [docs/VERSIONS.md](docs/VERSIONS.md);
+limitações conhecidas em [docs/M8-COMPOSITION.md](docs/M8-COMPOSITION.md).
 
-## Comece aqui
+## Instalação
 
-- [Mapa da documentação](docs/README.md)
-- [Estado real do código](docs/STATUS.md)
-- [Arquitetura proposta](docs/ARCHITECTURE.md)
-- [Contrato e invariantes](docs/CONTRACT.md)
-- [Primeiro marco e roadmap](docs/ROADMAP.md)
-- [Protocolo v0.1 em elaboração](docs/PROTOCOL.md)
-
-**Próximas fases: consolidação e composição genérica entre processos.** Consulte o [plano do kernel](docs/NEXT-PHASES.md) e a [operação dos perfis atuais](docs/MANAGED-RUNTIME.md). Abstrações de agente do scaffold legado (`Model`, `Tool`, `EchoTool`, `CannedModel`, `Agent`) e o crate `matrix-tui` (incluindo `--agent`) foram removidos em 2026-09-06 conforme o [plano de remoção](docs/KERNEL-CLEANUP.md); não fazem parte da API do kernel.
-
-## Executar o scaffold existente
-
-Requer Rust/Cargo e ambiente Unix. Estes comandos são a interface atual, não implementações do protocolo futuro:
+SDKs em 9 linguagens, dual-licenciados MIT OR Apache-2.0. Publicação nos
+registries está em andamento; hoje, instale dos artefatos locais:
 
 ```sh
-cargo build --release
-export MATRIX_RT_HOME="$PWD"
-./target/release/matrix-rt run --json
+./scripts/package.sh
 ```
 
-Em outro terminal, na mesma pasta, com a mesma variável:
+Depois siga o guia por ecossistema em [docs/INSTALL.md](docs/INSTALL.md)
+(venv + wheel offline, `npm install --offline` do tarball, `GOPROXY=off`,
+`shards`/`mix`/`dotnet`/`cmake` sem rede). Cada SDK tem um `scaffold.sh`
+que gera um projeto funcional a partir de template.
+
+## Uso em 5 minutos
 
 ```sh
-./target/release/matrix-rt status --json
-./target/release/matrix-rt invoke 'echo.msg@1' '{"ping":true}' --json
-./target/release/matrix-rt emit sys.tick '{}' --json
-./target/release/matrix-rt invoke 'count.state@1' '{}' --json
-./target/release/matrix-rt quit --json
+./scripts/dev-pki.py /tmp/pki --server-name localhost
+# edite um config.json (exemplo em sdk-python/templates/config.json)
+./target/release/matrix-managed serve /tmp/config.json
 ```
 
-Validação canônica: `make test` (release, exemplos atualizados, `--test-threads=1`). O [smoke gerenciado](scripts/smoke-managed.py) verifica a CLI, TLS, deduplicação, efeito com fencing e snapshot. Desempenho WAN e equivalência formal não foram demonstrados.
+Ou via SDK Python:
 
-## Layout atual
+```python
+from matrix_operator import start
+kernel = start("/path/to/matrix-managed", config_dict, operator_pki)
+act = kernel.client.activate("prov", 30000)
+v = kernel.client.invoke(act["lease"], act["fence"], "op-1",
+                         "prov.echo@1", {"ping": 1})
+kernel.close()
+```
 
-| Crate | Hoje |
+O demo fim-a-fim (`python3 scripts/demo-composition.py`) mostra chain
+Rust→Python com withdraw e reintrodução em ~1 minuto.
+
+## Documentação
+
+- [Mapa da documentação](docs/README.md) · [Estado real do código](docs/STATUS.md)
+- [Contrato e invariantes](docs/CONTRACT.md) · [Protocolo](docs/PROTOCOL.md)
+- [Perfil gerenciado (operação)](docs/MANAGED-RUNTIME.md) · [Plugins](PLUGIN.md)
+- [Conformidade dos SDKs](CONFORMANCE.md) · [Verificação do kernel](KERNEL_VERIFICATION.md)
+
+## Layout
+
+| Crate | Papel |
 |---|---|
 | `matrix-core` | Contextos, recursos, dependências, tickets e lifecycle local |
-| `matrix-rt` | Daemon e CLI por socket Unix, perfil confiável |
+| `matrix-rt` | Daemon e CLI por socket Unix, perfil confiável (legado) |
 | `matrix-host` / `matrix-component` | Host e SDK de processos locais |
 | `matrix-guard` | Sandbox Linux e orçamento de supervisão |
-| `matrix-runtime` | Serviço gerenciado, SQLite e transporte TLS |
-| `matrix-sdk` | Cliente genérico do daemon (socket Unix): `rpc`, `invoke`, `emit`, `status` |
+| `matrix-runtime` | Serviço gerenciado: SQLite, TLS mútuo, leases (`api` é a fachada pública) |
+| `matrix-sdk` | Cliente legado do daemon (compatibilidade congelada) |
 
-[Direção do projeto](CHARTER.md) · [Plugins](PLUGIN.md) · [Referências](docs/REFERENCES.md)
+Validação canônica: `make test`. Compatibilidade: `make compat`.
 
-> **Quebra de API (2026-09-06, [plano de remoção](docs/KERNEL-CLEANUP.md)):** `matrix-tui`, a flag `--agent` e os símbolos `Model`, `Tool`, `EchoTool`, `CannedModel` e `Agent` deixam de existir, sem shim. Consumidores externos desses símbolos precisam manter seu próprio código de aplicação; compatibilidade do protocolo do daemon e do contrato de plugins continua sendo requisito.
+## Licença
 
-O scaffold deriva conceitualmente do master3/agentlab. Seu score `0.812` não é um resultado do Matrix. Documentos originais foram preservados em [history](docs/history/README.md).
+MIT OR Apache-2.0 — veja [LICENSE-MIT](LICENSE-MIT) e
+[LICENSE-APACHE-2.0](LICENSE-APACHE-2.0). Vale para todos os SDKs e crates;
+escolha a que preferir, sem copyleft: uso em projeto fechado é permitido,
+basta preservar os avisos.

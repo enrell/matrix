@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT OR Apache-2.0"
 authors = [{name = "enrell"}]
+urls = {Homepage = "https://github.com/enrell/matrix", Repository = "https://github.com/enrell/matrix"}
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: POSIX :: Linux",
